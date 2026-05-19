@@ -1,11 +1,11 @@
-# @rific/react-native-scanner
+# @rific/scanner
 
 Full-screen barcode scanner with animated overlays, pinch zoom, timeout ring, and scan tracking for React Native. Uses `expo-camera` for barcode scanning when installed.
 
 ## Installation
 
 ```sh
-npm install @rific/react-native-scanner react-native-gesture-handler react-native-reanimated react-native-svg expo-camera
+npm install @rific/scanner react-native-gesture-handler react-native-reanimated react-native-svg expo-camera
 ```
 
 Optional (for richer UI):
@@ -16,7 +16,7 @@ npm install react-native-paper react-native-safe-area-context
 ## Usage
 
 ```tsx
-import { Scanner } from '@rific/react-native-scanner'
+import { Scanner } from '@rific/scanner'
 
 <Scanner
   accentColor='#6200ee'
@@ -33,7 +33,7 @@ import { Scanner } from '@rific/react-native-scanner'
 ### With custom menu
 
 ```tsx
-import { Scanner, MenuBag } from '@rific/react-native-scanner'
+import { Scanner, MenuBag } from '@rific/scanner'
 
 <Scanner
   onScan={handleScan}

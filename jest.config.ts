@@ -1,4 +1,6 @@
-module.exports = {
+import type { Config } from 'jest'
+
+const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],
@@ -10,8 +12,18 @@ module.exports = {
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts'
   },
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react', module: 'CommonJS', moduleResolution: 'node', ignoreDeprecations: '5.0', types: ['jest', 'node'] } }]
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        jsx: 'react',
+        module: 'CommonJS',
+        moduleResolution: 'node',
+        ignoreDeprecations: '5.0',
+        types: ['jest', 'node']
+      }
+    }]
   },
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts']
 }
+
+export default config
