@@ -3,7 +3,7 @@ import React, { memo, useCallback } from 'react'
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Bounds } from './Bounds'
-import type { BarcodeScanResult } from './types'
+import type { BarcodeScanResult, IconSource } from './types'
 
 let PaperIconButton: any = null
 try {
@@ -12,6 +12,11 @@ try {
 
 const ICON_SIZE = 30
 
+const resolveIcon = (icon: IconSource): any => {
+  if (typeof icon === 'function') return icon({ color: 'white', size: ICON_SIZE })
+  return icon
+}
+
 export type ScanProps = {
   check: Animated.Value
   color: string
@@ -19,10 +24,12 @@ export type ScanProps = {
   onPress: (scan: BarcodeScanResult) => void
   origin: Animated.ValueXY
   scan: BarcodeScanResult
+  scanIcon?: IconSource
+  scannedIcon?: IconSource
   width: Animated.Value
 }
 
-function ScanComponent({ check, color, height, onPress, origin, scan, width }: ScanProps) {
+function ScanComponent({ check, color, height, onPress, origin, scan, scanIcon, scannedIcon, width }: ScanProps) {
   const handlePress = useCallback(() => onPress(scan), [onPress, scan])
 
   const scanOpacity = check.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
@@ -30,15 +37,21 @@ function ScanComponent({ check, color, height, onPress, origin, scan, width }: S
 
   const iconStyle = [styles.absolute, styles.iconSlot]
 
-  const scanIndicator = PaperIconButton ? <PaperIconButton iconColor='white' containerColor={color} icon='qrcode' size={ICON_SIZE} style={styles.iconButton} /> : <View style={[styles.fallbackIcon, { backgroundColor: color }]} />
+  const resolvedScanIcon = scanIcon ? resolveIcon(scanIcon) : null
+  const resolvedScannedIcon = scannedIcon ? resolveIcon(scannedIcon) : null
 
-  const checkIndicator = PaperIconButton ? (
-    <PaperIconButton iconColor='white' containerColor={color} icon='check' size={ICON_SIZE} style={styles.iconButton} />
-  ) : (
-    <View style={[styles.fallbackIcon, { backgroundColor: color }]}>
-      <Animated.Text style={styles.checkText}>✓</Animated.Text>
-    </View>
-  )
+  const scanIndicator = resolvedScanIcon && typeof resolvedScanIcon !== 'string' ? <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScanIcon}</View> : PaperIconButton ? <PaperIconButton iconColor='white' containerColor={color} icon={resolvedScanIcon ?? 'qrcode'} size={ICON_SIZE} style={styles.iconButton} /> : <View style={[styles.fallbackIcon, { backgroundColor: color }]} />
+
+  const checkIndicator =
+    resolvedScannedIcon && typeof resolvedScannedIcon !== 'string' ? (
+      <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScannedIcon}</View>
+    ) : PaperIconButton ? (
+      <PaperIconButton iconColor='white' containerColor={color} icon={resolvedScannedIcon ?? 'check'} size={ICON_SIZE} style={styles.iconButton} />
+    ) : (
+      <View style={[styles.fallbackIcon, { backgroundColor: color }]}>
+        <Animated.Text style={styles.checkText}>✓</Animated.Text>
+      </View>
+    )
 
   return (
     <Animated.View style={[styles.absolute, { top: origin.y, left: origin.x, height, width }]}>
@@ -57,6 +70,7 @@ export const Scan = memo(ScanComponent)
 
 const styles = StyleSheet.create({
   absolute: { position: 'absolute' },
+  iconCenter: { alignItems: 'center', justifyContent: 'center' },
   checkText: {
     color: 'white',
     fontSize: 16,
