@@ -1,3 +1,8 @@
+import type { ReactNode } from 'react'
+import type { ImageSourcePropType } from 'react-native'
+
+export type IconSource = string | ImageSourcePropType | ((props: { color: string; size: number }) => ReactNode)
+
 export type BarcodeScanResult = {
   data: string
   type: string
