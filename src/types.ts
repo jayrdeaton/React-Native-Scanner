@@ -15,10 +15,17 @@ export type ScanResult = {
   type: string
 }
 
-export type MenuBag = {
-  barcodeTypes: string[]
-  facing: 'front' | 'back'
-  setFacing: (facing: 'front' | 'back') => void
-  setTorch: (torch: boolean) => void
-  torch: boolean
+
+export type PhotoResult = {
+  uri: string
+  width: number
+  height: number
+  base64?: string
+}
+
+export type PictureOptions = {
+  quality?: number
+  base64?: boolean
+  exif?: boolean
+  skipProcessing?: boolean
 }

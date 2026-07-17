@@ -65,7 +65,7 @@ describe('Scanner', () => {
 
   it('renders with renderMenu prop', () => {
     expect(() => {
-      render(<Scanner onScan={onScan} renderMenu={() => <></>} />)
+      render(<Scanner onScan={onScan} renderMenu={<></>} />)
     }).not.toThrow()
   })
 
