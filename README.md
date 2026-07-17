@@ -95,8 +95,8 @@ type MenuBag = {
 ## Peer dependencies
 
 Required:
-- `react >= 17.0.0`
-- `react-native >= 0.70.0`
+- `react >= 18.0.0`
+- `react-native >= 0.76.0`
 - `react-native-gesture-handler >= 2.0.0`
 - `react-native-reanimated >= 3.0.0`
 - `react-native-svg >= 13.0.0`
@@ -104,4 +104,4 @@ Required:
 Optional:
 - `expo-camera >= 15.0.0` — barcode scanning; without it the camera renders as a blank view
 - `react-native-paper >= 5.0.0` — richer UI (icon buttons, Portal); without it falls back to simple Pressable elements
-- `react-native-safe-area-context >= 4.0.0` — proper notch/safe area handling; without it falls back to a fixed iOS top padding
+- `react-native-safe-area-context >= 5.0.0` — proper notch/safe area handling; without it falls back to a fixed iOS top padding

@@ -1,5 +1,5 @@
 export type { ScannerProps } from './Scanner'
 export { Scanner } from './Scanner'
-export type { IconSource, MenuBag, ScanResult } from './types'
+export type { IconSource, PhotoResult, PictureOptions, ScanResult } from './types'
 export type { UseScanOverlaysOptions, UseScanOverlaysResult } from './useScanOverlays'
 export { useScanOverlays } from './useScanOverlays'
