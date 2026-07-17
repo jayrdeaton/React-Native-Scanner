@@ -1,6 +1,6 @@
 {
   "name": "@rific/scanner",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Full-screen barcode scanner with animated overlays, pinch zoom, timeout ring, and scan tracking for React Native",
   "keywords": [
     "react-native",
