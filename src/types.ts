@@ -15,7 +15,6 @@ export type ScanResult = {
   type: string
 }
 
-
 export type PhotoResult = {
   uri: string
   width: number
