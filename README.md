@@ -5,7 +5,7 @@ Full-screen barcode scanner with animated overlays, pinch zoom, timeout ring, an
 ## Installation
 
 ```sh
-npm install @rific/scanner react-native-gesture-handler react-native-reanimated react-native-svg expo-camera
+npm install @rific/scanner react-native-gesture-handler react-native-worklets react-native-svg expo-camera
 ```
 
 Optional (for richer UI):
@@ -98,7 +98,7 @@ Required:
 - `react >= 18.0.0`
 - `react-native >= 0.76.0`
 - `react-native-gesture-handler >= 2.0.0`
-- `react-native-reanimated >= 3.0.0`
+- `react-native-worklets >= 0.7.0`
 - `react-native-svg >= 13.0.0`
 
 Optional:

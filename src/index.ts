@@ -1,3 +1,5 @@
+export type { BuildDisabledScanValueSetOptions } from './buildDisabledScanValueSet'
+export { buildDisabledScanValueSet } from './buildDisabledScanValueSet'
 export type { ScannerProps } from './Scanner'
 export { Scanner } from './Scanner'
 export type { IconSource, PhotoResult, PictureOptions, ScanResult } from './types'

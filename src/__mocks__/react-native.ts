@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React from 'react'
+import type { ReactNode } from 'react'
 
-const stub = ({ children }: { children?: React.ReactNode }) => children ?? null
+const stub = ({ children }: { children?: ReactNode }) => children ?? null
 
 const noop = () => {}
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Animated, Easing, StyleSheet, View, ViewStyle } from 'react-native'
 import Svg, { Circle, G } from 'react-native-svg'
 
