@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { memo, useCallback } from 'react'
+import { memo, useCallback } from 'react'
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Bounds } from './Bounds'

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import { runOnJS } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import { TimerRing } from './TimerRing'
 import type { IconSource, PhotoResult, PictureOptions, ScanResult } from './types'
@@ -129,10 +129,10 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
       Gesture.Pinch()
         .onUpdate((event: any) => {
           const scale = typeof event.scale === 'number' ? event.scale : 1
-          runOnJS(setZoom)(Math.max(0, Math.min(1, baseZoom + (scale - 1) * ZOOM_SENSITIVITY)))
+          scheduleOnRN(setZoom, Math.max(0, Math.min(1, baseZoom + (scale - 1) * ZOOM_SENSITIVITY)))
         })
         .onEnd(() => {
-          runOnJS(setBaseZoom)(Number.isFinite(zoom) ? zoom : 0)
+          scheduleOnRN(setBaseZoom, Number.isFinite(zoom) ? zoom : 0)
         }),
     [baseZoom, zoom]
   )

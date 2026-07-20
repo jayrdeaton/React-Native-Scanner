@@ -1,6 +1,6 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 
-const stub = ({ children }: { children?: React.ReactNode }) => children ?? null
+const stub = ({ children }: { children?: ReactNode }) => children ?? null
 
 export default stub
 export const Svg = stub

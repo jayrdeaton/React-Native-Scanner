@@ -1,4 +1,4 @@
-import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated } from 'react-native'
 
 import { Scan } from './Scan'
@@ -28,7 +28,7 @@ const animateCheckState = (check: Animated.Value | undefined, toValue: number) =
   Animated.timing(check, { toValue, duration: DURATION, useNativeDriver: USE_NATIVE_DRIVER }).start()
 }
 
-const clearTrackedValue = (trackedValues: React.RefObject<Set<string>>, trackedTimers: React.RefObject<Record<string, ReturnType<typeof setTimeout>>>, value: string) => {
+const clearTrackedValue = (trackedValues: RefObject<Set<string>>, trackedTimers: RefObject<Record<string, ReturnType<typeof setTimeout>>>, value: string) => {
   trackedValues.current.delete(value)
   clearTimeout(trackedTimers.current[value])
   delete trackedTimers.current[value]

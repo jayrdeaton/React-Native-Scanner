@@ -1,7 +1,7 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 
-export const GestureHandlerRootView = ({ children }: { children?: React.ReactNode }) => children ?? null
-export const GestureDetector = ({ children }: { children?: React.ReactNode }) => children ?? null
+export const GestureHandlerRootView = ({ children }: { children?: ReactNode }) => children ?? null
+export const GestureDetector = ({ children }: { children?: ReactNode }) => children ?? null
 
 const noopHandler = {
   onBegin: (_fn: unknown) => noopHandler,

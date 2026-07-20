@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(cd /Users/jay/Developer/React-Native-Haptic-Press && mkdir -p .vscode && ls -la)",
+      "Bash(mkdir -p /Users/jay/Developer/React-Native-Auto-Paper/.vscode && echo \"created/exists\")",
+      "Bash(cd /Users/jay/Developer/Expo-Sync && mkdir -p .vscode && ls -la .vscode)",
+      "Bash(sed -i.bak 's/,\\\\n *\"types\": \\\\[\"jest\", \"node\"\\\\]//' tsconfig.json)",
+      "Bash(python3 -c ' *)",
+      "Bash(cp tsconfig.json /tmp/tsconfig_with_types.json)",
+      "Bash(cp /tmp/tsconfig_no_types.json tsconfig.json)",
+      "Bash(cp tsconfig.json /tmp/tsconfig_before_domtest.json)",
+      "Bash(node -pe \"JSON.stringify\\({dev: require\\('./package.json'\\).devDependencies, peer: require\\('./package.json'\\).peerDependencies}, null, 2\\)\")"
+    ],
+    "additionalDirectories": [
+      "/Users/jay/Developer/React-Native-Haptic-Press",
+      "/Users/jay/Developer/React-Native-Auto-Paper",
+      "/Users/jay/Developer/Expo-Sync"
+    ]
+  }
+}
