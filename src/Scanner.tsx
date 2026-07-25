@@ -128,10 +128,12 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
     () =>
       Gesture.Pinch()
         .onUpdate((event: any) => {
+          'worklet'
           const scale = typeof event.scale === 'number' ? event.scale : 1
           scheduleOnRN(setZoom, Math.max(0, Math.min(1, baseZoom + (scale - 1) * ZOOM_SENSITIVITY)))
         })
         .onEnd(() => {
+          'worklet'
           scheduleOnRN(setBaseZoom, Number.isFinite(zoom) ? zoom : 0)
         }),
     [baseZoom, zoom]
