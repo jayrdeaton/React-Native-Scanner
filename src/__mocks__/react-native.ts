@@ -39,6 +39,7 @@ const Animated = {
   spring: (_value: unknown, _config: unknown) => animatedObj,
   parallel: (_anims: unknown[]) => animatedObj,
   sequence: (_anims: unknown[]) => animatedObj,
+  Text: stub,
   View: stub
 }
 

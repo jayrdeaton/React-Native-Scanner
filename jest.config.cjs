@@ -3,6 +3,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/worktrees/'],
   moduleNameMapper: {
     '^expo-camera$': '<rootDir>/src/__mocks__/expo-camera.ts',
     '^react-native-gesture-handler$': '<rootDir>/src/__mocks__/react-native-gesture-handler.ts',
@@ -16,6 +17,7 @@ module.exports = {
       {
         tsconfig: {
           jsx: 'react-jsx',
+          lib: ['ES2020', 'DOM'],
           module: 'CommonJS',
           moduleResolution: 'node',
           ignoreDeprecations: '5.0',

@@ -2,6 +2,7 @@ export type { BuildDisabledScanValueSetOptions } from './buildDisabledScanValueS
 export { buildDisabledScanValueSet } from './buildDisabledScanValueSet'
 export type { ScannerProps } from './Scanner'
 export { Scanner } from './Scanner'
-export type { IconSource, PhotoResult, PictureOptions, ScanResult } from './types'
+export { configureScanner, getScannerConfig, type ScannerConfig, ScannerProvider, type ScannerProviderProps } from './ScannerConfig'
+export type { CameraModule, CameraPermissionResult, IconSource, PhotoResult, PictureOptions, SafeAreaModule, ScannerPaperModule, ScanResult } from './types'
 export type { UseScanOverlaysOptions, UseScanOverlaysResult } from './useScanOverlays'
 export { useScanOverlays } from './useScanOverlays'
