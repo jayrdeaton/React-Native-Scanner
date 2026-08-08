@@ -1,6 +1,6 @@
 # @rific/scanner
 
-Full-screen barcode scanner with animated overlays, pinch zoom, timeout ring, and scan tracking for React Native. Uses `expo-camera` for barcode scanning when installed.
+Full-screen barcode scanner with animated overlays, pinch zoom, timeout ring, and scan tracking for React Native. Uses `expo-camera` for barcode scanning when injected.
 
 ## Installation
 
@@ -12,6 +12,31 @@ Optional (for richer UI):
 ```sh
 npm install react-native-paper react-native-safe-area-context
 ```
+
+None of `expo-camera`, `react-native-paper`, or `react-native-safe-area-context` are auto-detected. Configure them once, near your app root: every `<Scanner>` picks them up automatically, with nothing to repeat per screen:
+
+```tsx
+import { configureScanner } from '@rific/scanner'
+import * as ExpoCamera from 'expo-camera'
+import * as RNPaper from 'react-native-paper'
+import * as SafeAreaContext from 'react-native-safe-area-context'
+
+configureScanner({ camera: ExpoCamera, paper: RNPaper, safeArea: SafeAreaContext })
+```
+
+Or mount `ScannerProvider` instead: it's a thin wrapper that just calls `configureScanner()` for you, for consistency with how the other `@rific` packages configure their own optional integrations:
+
+```tsx
+import { ScannerProvider } from '@rific/scanner'
+
+<ScannerProvider camera={ExpoCamera} paper={RNPaper} safeArea={SafeAreaContext}>
+  {/* your app */}
+</ScannerProvider>
+```
+
+Either way, this is one-time setup, not reactive state: call it once, before your first `<Scanner>` renders. Omit any of the three and you get a working fallback for just that one: no camera feed (a plain colored view instead), a simple fallback dot instead of Paper's icon buttons, and a fixed iOS-style top padding instead of real device insets.
+
+`camera`/`paper`/`safeArea` are also available as per-instance props on `<Scanner>`, for the rare case where one particular screen needs something different from the configured default: a prop always overrides the configured value.
 
 ## Usage
 
@@ -65,6 +90,7 @@ const [torch, setTorch] = useState(false)
 | `autoScan` | `boolean` | `true` | Auto-capture on detect; `false` = manual press |
 | `backgroundColor` | `string` | `'black'` | Camera background color |
 | `barcodeTypes` | `string[]` | all | Barcode types to detect (e.g. `['qr', 'ean13']`) |
+| `camera` | `CameraModule` | `configureScanner()`'s value | Overrides the configured `camera` for this one instance. See [Installation](#installation). |
 | `captureIcon` | `IconSource` | | Icon for the capture button (string, `ImageSourcePropType`, or `(props: { color, size }) => ReactNode`) |
 | `children` | `ReactNode` | | Rendered over the camera |
 | `closeIcon` | `IconSource` | | Icon for the close button |
@@ -76,13 +102,15 @@ const [torch, setTorch] = useState(false)
 | `onDisabledScan` | `(value: string) => void` | | Called when a disabled value is pressed |
 | `onPermissionDenied` | `() => void` | | Called when camera permission is denied |
 | `onPhoto` | `(photo: PhotoResult) => void` | | Called with the captured photo when `mode='photo'` |
-| `onSound` | `() => void` | | Called on successful scan — play a sound here |
+| `onSound` | `() => void` | | Called on successful scan; play a sound here |
 | `onTimeout` | `() => void` | | Called when the timeout ring completes |
-| `onVibrate` | `() => void` | | Called on successful scan — trigger haptics here |
+| `onVibrate` | `() => void` | | Called on successful scan; trigger haptics here |
+| `paper` | `ScannerPaperModule` | `configureScanner()`'s value | Overrides the configured `paper` for this one instance. See [Installation](#installation). |
 | `pictureOptions` | `PictureOptions` | | Options passed to `takePictureAsync` when `mode='photo'` |
 | `renderCapture` | `(handlers: { onPress, onPressIn, onPressOut }) => ReactNode` | | Fully custom capture button; receives the press handlers to wire up |
 | `renderClose` | `(handlers: { onPress }) => ReactNode` | | Fully custom close button; receives the press handler to wire up |
 | `renderMenu` | `ReactNode` | | Custom content rendered in the header (e.g. a menu of torch/facing controls) |
+| `safeArea` | `SafeAreaModule` | `configureScanner()`'s value | Overrides the configured `safeArea` for this one instance. See [Installation](#installation). |
 | `scanIcon` | `IconSource` | | Icon shown on an unscanned overlay target |
 | `scanTimeout` | `number` | `0` | Seconds before a scanned value reverts to unscanned; `0` = never |
 | `scannedIcon` | `IconSource` | | Icon shown on an already-scanned overlay target |
@@ -130,7 +158,7 @@ Required:
 - `react-native-worklets >= 0.7.0`
 - `react-native-svg >= 13.0.0`
 
-Optional:
-- `expo-camera >= 15.0.0` — barcode scanning; without it the camera renders as a blank view
-- `react-native-paper >= 5.0.0` — richer UI (icon buttons, Portal); without it falls back to simple Pressable elements
-- `react-native-safe-area-context >= 5.0.0` — proper notch/safe area handling; without it falls back to a fixed iOS top padding
+Optional, none are auto-detected: configure them via `configureScanner()`/`ScannerProvider` (see [Installation](#installation)):
+- `expo-camera >= 15.0.0`: barcode scanning; without it the camera renders as a blank view
+- `react-native-paper >= 5.0.0`: richer scan-overlay icon buttons; without it falls back to a plain dot
+- `react-native-safe-area-context >= 5.0.0`: proper notch/safe area handling; without it falls back to a fixed iOS top padding

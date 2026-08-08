@@ -4,27 +4,20 @@ import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-na
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import { getScannerConfig } from './ScannerConfig'
 import { TimerRing } from './TimerRing'
-import type { IconSource, PhotoResult, PictureOptions, ScanResult } from './types'
+import type { CameraModule, IconSource, PhotoResult, PictureOptions, SafeAreaModule, ScannerPaperModule, ScanResult } from './types'
 import { useScanOverlays } from './useScanOverlays'
-
-let CameraView: any = null
-let useCameraPermissions: any = null
-try {
-  const cam = require('expo-camera')
-  CameraView = cam.CameraView
-  useCameraPermissions = cam.useCameraPermissions
-} catch {}
-
-let useSafeAreaInsets: any = null
-try {
-  useSafeAreaInsets = require('react-native-safe-area-context').useSafeAreaInsets
-} catch {}
 
 const ZOOM_SENSITIVITY = 0.2
 
-const SafeAreaWrapper = ({ children, style }: { children: ReactNode; style?: ViewStyle }) => {
-  const insets = useSafeAreaInsets ? useSafeAreaInsets() : { top: Platform.OS === 'ios' ? 44 : 0, bottom: 0, left: 0, right: 0 }
+// useSafeAreaInsets is a hook and must be called unconditionally on every render (rules of
+// hooks); this fallback stands in when safeArea isn't configured, so a per-render branch isn't
+// needed.
+const useSafeAreaInsetsFallback = () => ({ top: Platform.OS === 'ios' ? 44 : 0, bottom: 0, left: 0, right: 0 })
+
+const SafeAreaWrapper = ({ children, safeArea, style }: { children: ReactNode; safeArea?: SafeAreaModule; style?: ViewStyle }) => {
+  const insets = (safeArea?.useSafeAreaInsets ?? useSafeAreaInsetsFallback)()
   return <View style={[styles.flex, { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }, style]}>{children}</View>
 }
 
@@ -33,6 +26,7 @@ export type ScannerProps = {
   autoScan?: boolean
   backgroundColor?: string
   barcodeTypes?: string[]
+  camera?: CameraModule
   captureIcon?: IconSource
   children?: ReactNode
   closeIcon?: IconSource
@@ -48,10 +42,12 @@ export type ScannerProps = {
   onSound?: () => void
   onTimeout?: () => void
   onVibrate?: () => void
+  paper?: ScannerPaperModule
   pictureOptions?: PictureOptions
   renderCapture?: (handlers: { onPress: () => void; onPressIn: () => void; onPressOut: () => void }) => ReactNode
   renderClose?: (handlers: { onPress: () => void }) => ReactNode
   renderMenu?: ReactNode
+  safeArea?: SafeAreaModule
   scanIcon?: IconSource
   scanTimeout?: number
   scannedIcon?: IconSource
@@ -60,9 +56,20 @@ export type ScannerProps = {
   torch?: boolean
 }
 
-export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundColor = 'black', barcodeTypes, captureIcon, children, closeIcon, disabledScanValues, disabledScanValueSet, facing = 'back', mode = 'scan', onClose, onDisabledScan, onPermissionDenied, onPhoto, onScan, onSound, onTimeout, onVibrate, pictureOptions, renderCapture, renderClose, renderMenu, scanIcon, scanTimeout = 0, scannedIcon, style, timeout = 0, torch = false }: ScannerProps) => {
+const useCameraPermissionsFallback = (): readonly [{ canAskAgain: boolean; granted: boolean }, () => void] => [{ granted: true, canAskAgain: false }, () => {}]
+
+export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundColor = 'black', barcodeTypes, camera: cameraProp, captureIcon, children, closeIcon, disabledScanValues, disabledScanValueSet, facing = 'back', mode = 'scan', onClose, onDisabledScan, onPermissionDenied, onPhoto, onScan, onSound, onTimeout, onVibrate, paper: paperProp, pictureOptions, renderCapture, renderClose, renderMenu, safeArea: safeAreaProp, scanIcon, scanTimeout = 0, scannedIcon, style, timeout = 0, torch = false }: ScannerProps) => {
+  // Per-instance props always win; otherwise fall back to whatever configureScanner()/
+  // <ScannerProvider> set globally.
+  const scannerConfig = getScannerConfig()
+  const camera = cameraProp ?? scannerConfig.camera
+  const paper = paperProp ?? scannerConfig.paper
+  const safeArea = safeAreaProp ?? scannerConfig.safeArea
+
   const cameraRef = useRef<any>(null)
-  const [permission, requestPermission] = useCameraPermissions ? useCameraPermissions() : [{ granted: true, canAskAgain: false }, () => {}]
+  // useCameraPermissions is a hook and must be called unconditionally on every render (rules of
+  // hooks), same reasoning as useSafeAreaInsetsFallback above.
+  const [permission, requestPermission] = (camera?.useCameraPermissions ?? useCameraPermissionsFallback)()
   const [timerStarted, setTimerStarted] = useState<string | null>(null)
   const [zoom, setZoom] = useState(0)
   const [baseZoom, setBaseZoom] = useState(0)
@@ -105,6 +112,7 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
     onScan,
     onSound,
     onVibrate,
+    paper,
     scanIcon,
     scanTimeout,
     scannedIcon
@@ -171,8 +179,8 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
   return (
     <GestureDetector gesture={pinch}>
       <Pressable style={styles.container} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-        {cameraGranted && CameraView ? <CameraView ref={cameraRef} barcodeScannerSettings={barcodeTypes ? { barcodeTypes } : undefined} enableTorch={torch} facing={facing} onBarcodeScanned={handleScan} style={[StyleSheet.absoluteFill, styles.camera, { backgroundColor }, style]} zoom={zoom} /> : <View style={[StyleSheet.absoluteFill, styles.camera, { backgroundColor }, style]} />}
-        <SafeAreaWrapper style={styles.overlay}>
+        {cameraGranted && camera ? <camera.CameraView ref={cameraRef} barcodeScannerSettings={barcodeTypes ? { barcodeTypes } : undefined} enableTorch={torch} facing={facing} onBarcodeScanned={handleScan} style={[StyleSheet.absoluteFill, styles.camera, { backgroundColor }, style]} zoom={zoom} /> : <View style={[StyleSheet.absoluteFill, styles.camera, { backgroundColor }, style]} />}
+        <SafeAreaWrapper safeArea={safeArea} style={styles.overlay}>
           <View style={styles.header} pointerEvents='box-none'>
             <View style={styles.headerSide}>{closeButton}</View>
             <View style={styles.headerSide}>{renderMenu ?? null}</View>

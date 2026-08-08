@@ -3,12 +3,7 @@ import { memo, useCallback } from 'react'
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Bounds } from './Bounds'
-import type { BarcodeScanResult, IconSource } from './types'
-
-let PaperIconButton: any = null
-try {
-  PaperIconButton = require('react-native-paper').IconButton
-} catch {}
+import type { BarcodeScanResult, IconSource, ScannerPaperModule } from './types'
 
 const ICON_SIZE = 30
 
@@ -23,13 +18,14 @@ export type ScanProps = {
   height: Animated.Value
   onPress: (scan: BarcodeScanResult) => void
   origin: Animated.ValueXY
+  paper?: ScannerPaperModule
   scan: BarcodeScanResult
   scanIcon?: IconSource
   scannedIcon?: IconSource
   width: Animated.Value
 }
 
-function ScanComponent({ check, color, height, onPress, origin, scan, scanIcon, scannedIcon, width }: ScanProps) {
+function ScanComponent({ check, color, height, onPress, origin, paper, scan, scanIcon, scannedIcon, width }: ScanProps) {
   const handlePress = useCallback(() => onPress(scan), [onPress, scan])
 
   const scanOpacity = check.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
@@ -40,13 +36,13 @@ function ScanComponent({ check, color, height, onPress, origin, scan, scanIcon, 
   const resolvedScanIcon = scanIcon ? resolveIcon(scanIcon) : null
   const resolvedScannedIcon = scannedIcon ? resolveIcon(scannedIcon) : null
 
-  const scanIndicator = resolvedScanIcon && typeof resolvedScanIcon !== 'string' ? <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScanIcon}</View> : PaperIconButton ? <PaperIconButton iconColor='white' containerColor={color} icon={resolvedScanIcon ?? 'qrcode'} size={ICON_SIZE} style={styles.iconButton} /> : <View style={[styles.fallbackIcon, { backgroundColor: color }]} />
+  const scanIndicator = resolvedScanIcon && typeof resolvedScanIcon !== 'string' ? <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScanIcon}</View> : paper ? <paper.IconButton iconColor='white' containerColor={color} icon={resolvedScanIcon ?? 'qrcode'} size={ICON_SIZE} style={styles.iconButton} /> : <View style={[styles.fallbackIcon, { backgroundColor: color }]} />
 
   const checkIndicator =
     resolvedScannedIcon && typeof resolvedScannedIcon !== 'string' ? (
       <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScannedIcon}</View>
-    ) : PaperIconButton ? (
-      <PaperIconButton iconColor='white' containerColor={color} icon={resolvedScannedIcon ?? 'check'} size={ICON_SIZE} style={styles.iconButton} />
+    ) : paper ? (
+      <paper.IconButton iconColor='white' containerColor={color} icon={resolvedScannedIcon ?? 'check'} size={ICON_SIZE} style={styles.iconButton} />
     ) : (
       <View style={[styles.fallbackIcon, { backgroundColor: color }]}>
         <Animated.Text style={styles.checkText}>✓</Animated.Text>
