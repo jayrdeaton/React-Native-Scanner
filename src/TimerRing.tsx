@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Animated, Easing, StyleSheet, View, ViewStyle } from 'react-native'
 import Svg, { Circle, G } from 'react-native-svg'
 
@@ -19,7 +19,7 @@ export const TimerRing = ({ color, duration, onStop, radius, started, style, wid
   const startedRef = useRef<string | null>(null)
   const durationRef = useRef(duration)
   const circumference = 2 * Math.PI * radius
-  const animation = useRef(new Animated.Value(0)).current
+  const [animation] = useState(() => new Animated.Value(0))
 
   const startTimer = useCallback(() => {
     animation.setValue(0)

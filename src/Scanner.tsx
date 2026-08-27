@@ -21,6 +21,14 @@ const SafeAreaWrapper = ({ children, safeArea, style }: { children: ReactNode; s
   return <View style={[styles.flex, { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }, style]}>{children}</View>
 }
 
+type CaptureHandlers = { onPress: () => void; onPressIn: () => void; onPressOut: () => void }
+
+// handleCapturePress reads cameraRef/handlePressRef when invoked, so calling renderCapture(...)
+// directly inline (a synchronous function call) reads as "may read a ref during render". Routing
+// the call through this child component's own render defers it to JSX composition instead, which
+// is how the handlers are meant to be invoked (on interaction, not during Scanner's render).
+const RenderCapture = ({ handlers, render }: { handlers: CaptureHandlers; render: (handlers: CaptureHandlers) => ReactNode }) => <>{render(handlers)}</>
+
 export type ScannerProps = {
   accentColor?: string
   autoScan?: boolean
@@ -70,9 +78,14 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
   // useCameraPermissions is a hook and must be called unconditionally on every render (rules of
   // hooks), same reasoning as useSafeAreaInsetsFallback above.
   const [permission, requestPermission] = (camera?.useCameraPermissions ?? useCameraPermissionsFallback)()
-  const [timerStarted, setTimerStarted] = useState<string | null>(null)
+  const [timerStarted, setTimerStarted] = useState<string | null>(() => (timeout > 0 ? new Date().toISOString() : null))
   const [zoom, setZoom] = useState(0)
   const [baseZoom, setBaseZoom] = useState(0)
+  const [prevTimeout, setPrevTimeout] = useState(timeout)
+  if (timeout !== prevTimeout) {
+    setPrevTimeout(timeout)
+    if (timeout > 0) setTimerStarted(new Date().toISOString())
+  }
 
   const handlePressIn = useCallback(() => setTimerStarted(null), [])
   const handlePressOut = useCallback(() => {
@@ -118,7 +131,9 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
     scannedIcon
   })
 
-  handlePressRef.current = handlePress
+  useEffect(() => {
+    handlePressRef.current = handlePress
+  })
 
   useEffect(() => {
     if (permission?.canAskAgain && !permission?.granted) {
@@ -127,10 +142,6 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
       onPermissionDenied?.()
     }
   }, [onPermissionDenied, permission, requestPermission])
-
-  useEffect(() => {
-    if (timeout > 0) setTimerStarted(new Date().toISOString())
-  }, [timeout])
 
   const pinch = useMemo(
     () =>
@@ -152,7 +163,7 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
 
   const captureHandlers = { onPress: handleCapturePress, onPressIn: handlePressIn, onPressOut: handlePressOut }
   const captureButton = renderCapture ? (
-    renderCapture(captureHandlers)
+    <RenderCapture handlers={captureHandlers} render={renderCapture} />
   ) : typeof captureIcon === 'function' ? (
     <Pressable {...captureHandlers} hitSlop={40} style={[styles.captureButton, { backgroundColor: accentColor }]}>
       {captureIcon({ color: 'white', size: 32 })}
