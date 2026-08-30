@@ -2,7 +2,7 @@ import type * as ExpoCamera from 'expo-camera'
 import type * as RNPaper from 'react-native-paper'
 import type * as SafeAreaContext from 'react-native-safe-area-context'
 
-import type { CameraModule, ScannerPaperModule, SafeAreaModule } from '../types'
+import type { CameraModule, SafeAreaModule, ScannerPaperModule } from '../types'
 
 // Compile-time-only check (no runtime import, no test assertions) that the real peer modules
 // structurally satisfy this package's local mirror types. `tsc --noEmit` fails here if either
