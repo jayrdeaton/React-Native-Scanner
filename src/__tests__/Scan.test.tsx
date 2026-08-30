@@ -1,6 +1,5 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { Animated } from 'react-native'
-import React from 'react'
 
 import { Scan } from '../Scan'
 import type { BarcodeScanResult, ScannerPaperModule } from '../types'
@@ -39,5 +38,19 @@ describe('Scan', () => {
     const { container } = render(<Scan {...animatedProps} color='#6200ee' onPress={jest.fn()} paper={paper} scan={scan} scanIcon={customIcon} scannedIcon={customIcon} />)
     expect(container.textContent).toContain('custom-icon')
     expect(container.textContent).not.toContain('paper-icon')
+  })
+
+  it('calls onPress with the scan when the touchable is pressed', () => {
+    const onPressMock = jest.fn()
+    const { container } = render(<Scan {...animatedProps} color='#6200ee' onPress={onPressMock} scan={scan} scanIcon='qrcode' />)
+
+    const touchables = container.querySelectorAll('div')
+    expect(touchables.length).toBe(1)
+    const touchable = touchables[0]
+    expect(touchable).not.toBeNull()
+
+    fireEvent.click(touchable)
+
+    expect(onPressMock).toHaveBeenCalledWith(scan)
   })
 })

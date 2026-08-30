@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { ReactNode } from 'react'
+import { createElement } from 'react'
 
 const stub = ({ children }: { children?: ReactNode }) => children ?? null
 
@@ -62,5 +62,16 @@ export { Animated, Easing, Platform, StyleSheet }
 
 export const View = stub
 export const Text = stub
-export const Pressable = stub
-export const TouchableOpacity = stub
+
+type PressableStubProps = {
+  children?: ReactNode
+  onPress?: () => void
+  onPressIn?: () => void
+  onPressOut?: () => void
+  testID?: string
+}
+
+const pressableStub = ({ children, onPress, onPressIn, onPressOut, testID }: PressableStubProps) => createElement('div', { onClick: onPress, onMouseDown: onPressIn, onMouseUp: onPressOut, 'data-testid': testID }, children ?? null)
+
+export const Pressable = pressableStub
+export const TouchableOpacity = pressableStub
