@@ -66,7 +66,6 @@ export const Scan = memo(ScanComponent)
 
 const styles = StyleSheet.create({
   absolute: { position: 'absolute' },
-  iconCenter: { alignItems: 'center', justifyContent: 'center' },
   checkText: {
     color: 'white',
     fontSize: 16,
@@ -85,6 +84,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: ICON_SIZE + 8
   },
+  iconCenter: { alignItems: 'center', justifyContent: 'center' },
   iconRow: {
     alignItems: 'center',
     height: 44,
