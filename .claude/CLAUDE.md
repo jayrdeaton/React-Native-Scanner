@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working in this repository.
 
 # @rific/scanner
 
-Full-screen barcode scanner for React Native — animated scan overlays, pinch-to-zoom, a capture timeout ring, and per-value scan tracking (auto-scan or manual capture, with a disabled-value set for "already handled" items).
+Full-screen barcode scanner for React Native - animated scan overlays, pinch-to-zoom, a capture timeout ring, and per-value scan tracking (auto-scan or manual capture, with a disabled-value set for "already handled" items).
 
 Part of the `@rific` package ecosystem. Published at https://www.npmjs.com/package/@rific/scanner.
 
@@ -59,38 +59,38 @@ src/
     TimerRing.test.tsx
     buildDisabledScanValueSet.test.ts
     useScanOverlays.test.tsx
-    moduleShapes.typecheck.ts  - compile-time-only check that the real peer modules structurally satisfy types.ts's local mirrors; not a runtime test, always shows 0% in coverage (no exclude needed anymore — see Testing)
+    moduleShapes.typecheck.ts  - compile-time-only check that the real peer modules structurally satisfy types.ts's local mirrors; not a runtime test, always shows 0% in coverage (no exclude needed anymore - see Testing)
 ```
 
 ## Public API
 
 From `src/index.ts`:
 
-- `Scanner`, `ScannerProps` — the main component
-- `useScanOverlays`, `UseScanOverlaysOptions`, `UseScanOverlaysResult` — the overlay/scan-state hook, for consumers who want to build their own camera UI around it
-- `configureScanner`, `getScannerConfig`, `ScannerConfig`, `ScannerProvider`, `ScannerProviderProps` — one-time peer-module injection (camera/paper/safeArea)
-- `buildDisabledScanValueSet`, `BuildDisabledScanValueSetOptions` — builds the `disabledScanValueSet` passed to `Scanner`
+- `Scanner`, `ScannerProps` - the main component
+- `useScanOverlays`, `UseScanOverlaysOptions`, `UseScanOverlaysResult` - the overlay/scan-state hook, for consumers who want to build their own camera UI around it
+- `configureScanner`, `getScannerConfig`, `ScannerConfig`, `ScannerProvider`, `ScannerProviderProps` - one-time peer-module injection (camera/paper/safeArea)
+- `buildDisabledScanValueSet`, `BuildDisabledScanValueSetOptions` - builds the `disabledScanValueSet` passed to `Scanner`
 - `CameraModule`, `CameraPermissionResult`, `IconSource`, `PhotoResult`, `PictureOptions`, `SafeAreaModule`, `ScannerPaperModule`, `ScanResult` (types only)
 
 ## Peer Dependencies
 
-- `react` >=19.0.0, `react-native` >=0.76.0 — required
-- `react-native-gesture-handler` >=2.0.0 <3.0.0 — required. Pinch-to-zoom (`Gesture.Pinch()`)
-- `react-native-svg` >=13.0.0 — required. `TimerRing`'s circular countdown
-- `react-native-worklets` 0.10.x — required. Schedules the pinch gesture's zoom updates back onto the JS thread (`scheduleOnRN`)
-- `expo-camera` >=55.0.0 — optional (`peerDependenciesMeta`). Injected via `camera` prop/config for the live camera feed and permission handling; omit to render a plain colored view with no camera
-- `react-native-paper` >=5.0.0 — optional. Injected via `paper` prop/config to render scan-overlay icons as real Paper `IconButton`s instead of a plain fallback dot
-- `react-native-safe-area-context` >=5.0.0 — optional. Injected via `safeArea` prop/config for real device inset handling; omit to fall back to a fixed iOS-style top padding
+- `react` >=19.0.0, `react-native` >=0.76.0 - required
+- `react-native-gesture-handler` >=2.0.0 <3.0.0 - required. Pinch-to-zoom (`Gesture.Pinch()`)
+- `react-native-svg` >=13.0.0 - required. `TimerRing`'s circular countdown
+- `react-native-worklets` 0.10.x - required. Schedules the pinch gesture's zoom updates back onto the JS thread (`scheduleOnRN`)
+- `expo-camera` >=55.0.0 - optional (`peerDependenciesMeta`). Injected via `camera` prop/config for the live camera feed and permission handling; omit to render a plain colored view with no camera
+- `react-native-paper` >=5.0.0 - optional. Injected via `paper` prop/config to render scan-overlay icons as real Paper `IconButton`s instead of a plain fallback dot
+- `react-native-safe-area-context` >=5.0.0 - optional. Injected via `safeArea` prop/config for real device inset handling; omit to fall back to a fixed iOS-style top padding
 
-None of the three optional peers are auto-detected at the module level — Metro doesn't rewrite a `require()`-in-`try/catch` into its module graph inside an ESM build, so they're injected explicitly via props/config instead (see `types.ts`).
+None of the three optional peers are auto-detected at the module level - Metro doesn't rewrite a `require()`-in-`try/catch` into its module graph inside an ESM build, so they're injected explicitly via props/config instead (see `types.ts`).
 
 ## Testing
 
 - Framework: Jest (`@infinitetoken/jest-config/react-native`), jsdom environment
 - Mocks in `src/__mocks__/` for `expo-camera`, `react-native-gesture-handler`, `react-native-svg`, `react-native-worklets`, `react-native`
 - 64 tests across 6 suites (`Scan.test.tsx`, `Scanner.test.tsx`, `ScannerConfig.test.tsx`, `TimerRing.test.tsx`, `buildDisabledScanValueSet.test.ts`, `useScanOverlays.test.tsx`)
-- Coverage floor meets the fleet's 70% default on all four metrics with real margin — measured 98.29/93.14/98.3/98.81% (statements/branches/functions/lines) as of 2026-08-30, including `moduleShapes.typecheck.ts`'s always-0% lines in the denominator; `Scanner.tsx` and `useScanOverlays.tsx` are the weakest-tested files (both still short of 100% branch coverage). No local `collectCoverageFrom`/`coverageThreshold` override — the shared preset's defaults are enough now that coverage has real margin.
-- `moduleShapes.typecheck.ts` is a compile-only structural check (`tsc --noEmit` catches drift between `types.ts`'s local mirrors and the real peer modules) — it has no runtime assertions and doesn't match `testMatch`, so it always shows 0% in the coverage report; a local `collectCoverageFrom` exclude used to hide it from the aggregate when coverage was lower, but it's gone now — the file's permanent 0% no longer drags the aggregate below the 70% floor on any metric. (An in-file `/* istanbul ignore file */` was considered as an alternative — tested directly and confirmed it does **not** work in this fleet's setup: files transformed via `ts-jest`, not `babel-jest`, never pass through the Babel pipeline that honors istanbul directives, so the file still reports 0% either way.)
+- Coverage floor meets the fleet's 70% default on all four metrics with real margin - measured 98.29/93.14/98.3/98.81% (statements/branches/functions/lines) as of 2026-08-30, including `moduleShapes.typecheck.ts`'s always-0% lines in the denominator; `Scanner.tsx` and `useScanOverlays.tsx` are the weakest-tested files (both still short of 100% branch coverage). No local `collectCoverageFrom`/`coverageThreshold` override - the shared preset's defaults are enough now that coverage has real margin.
+- `moduleShapes.typecheck.ts` is a compile-only structural check (`tsc --noEmit` catches drift between `types.ts`'s local mirrors and the real peer modules) - it has no runtime assertions and doesn't match `testMatch`, so it always shows 0% in the coverage report; a local `collectCoverageFrom` exclude used to hide it from the aggregate when coverage was lower, but it's gone now - the file's permanent 0% no longer drags the aggregate below the 70% floor on any metric. (An in-file `/* istanbul ignore file */` was considered as an alternative - tested directly and confirmed it does **not** work in this fleet's setup: files transformed via `ts-jest`, not `babel-jest`, never pass through the Babel pipeline that honors istanbul directives, so the file still reports 0% either way.)
 
 ## Code Style
 
@@ -103,14 +103,14 @@ Enforced by ESLint + Prettier, run `npm run lint` before finishing any task.
 - Print width: 1000 (effectively disabled)
 
 **ESLint rules (warnings unless noted):**
-- `simple-import-sort` — imports and exports must be sorted
-- `react-native/no-inline-styles` — no inline style objects
-- `react-native/no-unused-styles` — no unused StyleSheet entries
-- `no-console` — no console statements
-- `@typescript-eslint/no-unused-vars` — `varsIgnorePattern`/`argsIgnorePattern`/`caughtErrorsIgnorePattern: '^_'` (unused vars/args/caught errors prefixed `_` are allowed)
-- `@typescript-eslint/no-explicit-any` — off in `__tests__/`/`__mocks__/`; on in `src/` proper. `Scanner.tsx` and `Scan.tsx` disable it file-wide (camera ref, gesture event casts, icon resolution); `types.ts` disables it inline just for `CameraView`'s `ComponentType<any>`
-- `react-hooks/rules-of-hooks` — error, not a warning
+- `simple-import-sort` - imports and exports must be sorted
+- `react-native/no-inline-styles` - no inline style objects
+- `react-native/no-unused-styles` - no unused StyleSheet entries
+- `no-console` - no console statements
+- `@typescript-eslint/no-unused-vars` - `varsIgnorePattern`/`argsIgnorePattern`/`caughtErrorsIgnorePattern: '^_'` (unused vars/args/caught errors prefixed `_` are allowed)
+- `@typescript-eslint/no-explicit-any` - off in `__tests__/`/`__mocks__/`; on in `src/` proper. `Scanner.tsx` and `Scan.tsx` disable it file-wide (camera ref, gesture event casts, icon resolution); `types.ts` disables it inline just for `CameraView`'s `ComponentType<any>`
+- `react-hooks/rules-of-hooks` - error, not a warning
 - `react-hooks/exhaustive-deps`, `react-hooks/refs`, `react-hooks/immutability`, `react-hooks/preserve-manual-memoization`, `react-hooks/set-state-in-effect`
-- `package-json/order-properties`, `package-json/sort-collections` — on `package.json` itself
+- `package-json/order-properties`, `package-json/sort-collections` - on `package.json` itself
 
-`tsconfig.json` sets `noUnusedLocals: false` (all other strict overrides removed) — the one genuinely load-bearing exception, needed for `moduleShapes.typecheck.ts`'s deliberately-unused `const` type-constraint declarations; TypeScript doesn't honor an eslint-style `_`-prefix exemption for `noUnusedLocals`.
+`tsconfig.json` sets `noUnusedLocals: false` (all other strict overrides removed) - the one genuinely load-bearing exception, needed for `moduleShapes.typecheck.ts`'s deliberately-unused `const` type-constraint declarations; TypeScript doesn't honor an eslint-style `_`-prefix exemption for `noUnusedLocals`.
