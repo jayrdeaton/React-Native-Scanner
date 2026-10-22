@@ -2,10 +2,12 @@
 
 Full-screen barcode scanner with animated overlays, pinch zoom, timeout ring, and scan tracking for React Native. Uses `expo-camera` for barcode scanning when injected.
 
+**[Overview](https://rific.jaydeaton.com/packages/scanner)**: an info page in the Expo Starter showcase, since this is an optional package with no runnable demo there.
+
 ## Installation
 
 ```sh
-npm install @rific/scanner react-native-gesture-handler react-native-worklets react-native-svg expo-camera
+npm install @rific/scanner @rific/core react-native-gesture-handler react-native-worklets react-native-svg expo-camera
 ```
 
 Optional (for richer UI):
@@ -152,13 +154,14 @@ type PictureOptions = {
 ## Peer dependencies
 
 Required:
-- `react >= 18.0.0`
+- `@rific/core >= 0.5.0`
+- `react >= 19.0.0`
 - `react-native >= 0.76.0`
-- `react-native-gesture-handler >= 2.0.0`
-- `react-native-worklets >= 0.7.0`
+- `react-native-gesture-handler >= 2.0.0 < 4.0.0`: 2.x or 3.x, so Expo SDK 58 apps (gesture-handler 3.3) are covered
+- `react-native-worklets >= 0.5.0`
 - `react-native-svg >= 13.0.0`
 
 Optional, none are auto-detected: configure them via `configureScanner()`/`ScannerProvider` (see [Installation](#installation)):
-- `expo-camera >= 15.0.0`: barcode scanning; without it the camera renders as a blank view
+- `expo-camera >= 55.0.0`: barcode scanning; without it the camera renders as a blank view
 - `react-native-paper >= 5.0.0`: richer scan-overlay icon buttons; without it falls back to a plain dot
 - `react-native-safe-area-context >= 5.0.0`: proper notch/safe area handling; without it falls back to a fixed iOS top padding

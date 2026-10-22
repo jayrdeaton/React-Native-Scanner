@@ -75,9 +75,10 @@ From `src/index.ts`:
 ## Peer Dependencies
 
 - `react` >=19.0.0, `react-native` >=0.76.0 - required
-- `react-native-gesture-handler` >=2.0.0 <3.0.0 - required. Pinch-to-zoom (`Gesture.Pinch()`)
+- `@rific/core` >=0.5.0 - required. `createModuleConfig()` backs `configureScanner()`/`getScannerConfig()`, and `useWorkletCallback`/`callWorkletCallback` carry the pinch zoom back to JS (a direct `scheduleOnRN(setZoom)` kept every Scanner ever mounted in memory)
+- `react-native-gesture-handler` >=2.0.0 <4.0.0 - required. Pinch-to-zoom (`Gesture.Pinch()`, the builder API that 3.x deprecates; see TODO.md). The cap was raised from <3.0.0 on 2026-10-18 so Expo SDK 58 apps (gesture-handler 3.3) can use it
 - `react-native-svg` >=13.0.0 - required. `TimerRing`'s circular countdown
-- `react-native-worklets` 0.10.x - required. Schedules the pinch gesture's zoom updates back onto the JS thread (`scheduleOnRN`)
+- `react-native-worklets` >=0.5.0 - required. Schedules the pinch gesture's zoom updates back onto the JS thread (`scheduleOnRN`)
 - `expo-camera` >=55.0.0 - optional (`peerDependenciesMeta`). Injected via `camera` prop/config for the live camera feed and permission handling; omit to render a plain colored view with no camera
 - `react-native-paper` >=5.0.0 - optional. Injected via `paper` prop/config to render scan-overlay icons as real Paper `IconButton`s instead of a plain fallback dot
 - `react-native-safe-area-context` >=5.0.0 - optional. Injected via `safeArea` prop/config for real device inset handling; omit to fall back to a fixed iOS-style top padding

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { callWorkletCallback, useWorkletCallback } from '@rific/core'
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -143,19 +144,25 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
     }
   }, [onPermissionDenied, permission, requestPermission])
 
+  // The pinch worklets reach the zoom setters through @rific/core's key registry, never scheduleOnRN(setZoom): worklets
+  // holds a scheduleOnRN target from native code for as long as the gesture this component holds lives, and a setter
+  // leads back to this component, so that loop kept every Scanner ever mounted in memory.
+  const zoomKey = useWorkletCallback(setZoom)
+  const baseZoomKey = useWorkletCallback(setBaseZoom)
+
   const pinch = useMemo(
     () =>
       Gesture.Pinch()
         .onUpdate((event: any) => {
           'worklet'
           const scale = typeof event.scale === 'number' ? event.scale : 1
-          scheduleOnRN(setZoom, Math.max(0, Math.min(1, baseZoom + (scale - 1) * ZOOM_SENSITIVITY)))
+          scheduleOnRN(callWorkletCallback, zoomKey, Math.max(0, Math.min(1, baseZoom + (scale - 1) * ZOOM_SENSITIVITY)))
         })
         .onEnd(() => {
           'worklet'
-          scheduleOnRN(setBaseZoom, Number.isFinite(zoom) ? zoom : 0)
+          scheduleOnRN(callWorkletCallback, baseZoomKey, Number.isFinite(zoom) ? zoom : 0)
         }),
-    [baseZoom, zoom]
+    [baseZoom, zoom, zoomKey, baseZoomKey]
   )
 
   const cameraGranted = permission?.granted === true
