@@ -216,7 +216,10 @@ describe('useScanOverlays', () => {
       expect(result.current.scanNodes).toHaveLength(0)
     })
 
-    it('glides to each report on the native driver, over the time since the last one', () => {
+    // The glides' configs, each report's origin, width and height in turn
+    const glidesOf = (timing: jest.SpyInstance) => timing.mock.calls.map(([, config]) => config as { duration: number; toValue: number | { x: number; y: number }; useNativeDriver: boolean })
+
+    it('glides toward each report on the native driver, over a little longer than the time since the last one', () => {
       const timing = jest.spyOn(Animated, 'timing')
       const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
 
@@ -224,23 +227,72 @@ describe('useScanOverlays', () => {
         result.current.handleScan(scan('abc'))
       })
       act(() => {
-        jest.advanceTimersByTime(33)
+        jest.advanceTimersByTime(40)
       })
       act(() => {
         result.current.handleScan(scan('abc', { bounds: { origin: { x: 10, y: 20 }, size: { width: 30, height: 40 } } }))
       })
 
-      const glides = timing.mock.calls.map(([, config]) => config)
-      expect(glides).toEqual([expect.objectContaining({ duration: 33, toValue: { x: 10, y: 20 }, useNativeDriver: true }), expect.objectContaining({ duration: 33, toValue: 30, useNativeDriver: true }), expect.objectContaining({ duration: 33, toValue: 40, useNativeDriver: true })])
+      const [origin, width, height] = glidesOf(timing)
+      expect([origin, width, height]).toEqual([expect.objectContaining({ duration: 50, useNativeDriver: true }), expect.objectContaining({ duration: 50, useNativeDriver: true }), expect.objectContaining({ duration: 50, useNativeDriver: true })])
+      // Part of the way from the first bounds (3 by 4) to the new ones, smoothed
+      expect(width.toValue).toBeGreaterThan(3)
+      expect(width.toValue).toBeLessThan(30)
+      expect(height.toValue).toBeGreaterThan(4)
+      expect(height.toValue).toBeLessThan(40)
     })
 
-    it('glides for no longer than 120ms, however slowly the camera reports', () => {
+    it('holds a box steady while its code holds still and the bounds wobble', () => {
+      const timing = jest.spyOn(Animated, 'timing')
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      // 4pt of wobble every report, as a camera's bounds have
+      for (let i = 0; i < 30; i++) {
+        if (i > 0) act(() => jest.advanceTimersByTime(33))
+        const wobble = i % 2 === 0 ? 0 : 4
+        act(() => result.current.handleScan(scan('abc', { bounds: { origin: { x: 100 + wobble, y: 200 - wobble }, size: { width: 160 + wobble, height: 160 - wobble } } })))
+      }
+
+      const glides = glidesOf(timing).slice(-30)
+      const spread = (values: number[]) => Math.max(...values) - Math.min(...values)
+      const origins = glides.filter((_, i) => i % 3 === 0).map(({ toValue }) => toValue as { x: number; y: number })
+      const widths = glides.filter((_, i) => i % 3 === 1).map(({ toValue }) => toValue as number)
+      expect(spread(origins.map(({ x }) => x))).toBeLessThan(1)
+      expect(spread(origins.map(({ y }) => y))).toBeLessThan(1)
+      expect(spread(widths)).toBeLessThan(1)
+    })
+
+    it('keeps up with a code moving fast', () => {
+      const timing = jest.spyOn(Animated, 'timing')
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      // 30pt a report, about 900pt a second
+      for (let i = 0; i < 20; i++) {
+        if (i > 0) act(() => jest.advanceTimersByTime(33))
+        act(() => result.current.handleScan(scan('abc', { bounds: { origin: { x: 30 * i, y: 100 }, size: { width: 160, height: 160 } } })))
+      }
+
+      const origin = glidesOf(timing).at(-3)?.toValue as { x: number; y: number }
+      expect(30 * 19 - origin.x).toBeLessThan(15)
+      expect(origin.y).toBeCloseTo(100)
+    })
+
+    it('glides at least 33ms, so reports arriving together never snap the box', () => {
+      const timing = jest.spyOn(Animated, 'timing')
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      report(() => result.current.handleScan(scan('abc')), 2, 2)
+
+      expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 33 }))
+    })
+
+    it('glides for no longer than 150ms, however slowly the camera reports', () => {
       const timing = jest.spyOn(Animated, 'timing')
       const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
 
       report(() => result.current.handleScan(scan('abc')), 2, 200)
 
-      expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 120 }))
+      expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 150 }))
     })
 
     it('fades a box out sooner when the camera reports its code often', () => {

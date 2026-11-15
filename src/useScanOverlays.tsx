@@ -2,6 +2,7 @@ import { ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState
 import { Animated, Easing } from 'react-native'
 
 import { Scan } from './Scan'
+import { type Smoother, smoother } from './smooth'
 import type { BarcodeScanResult, IconSource, ScannerPaperModule, ScanResult } from './types'
 
 const DURATION = 250
@@ -9,10 +10,23 @@ const DURATION = 250
 // busy (with a scan's own work, say). That's why Scan draws the box with transforms only.
 const USE_NATIVE_DRIVER = true
 
-// The camera reports a code it sees about every frame on iOS, and as often as ML Kit reads one on Android. The box glides
-// to each report's bounds over about the time since the last one, so it moves steadily a report behind the code at
-// whatever rate the camera reports, rather than springing after it.
-const MAX_GLIDE = 120
+// The camera reports a code it sees about every frame on iOS, and as often as ML Kit reads one on Android, and each
+// report's bounds wobble a few points even when the code holds still. Each report goes through a One Euro filter
+// (smooth.ts), which smooths hard while the code is nearly still and lets go as it moves, and the box glides to the result
+// over a little longer than the time between reports, so it's still moving when the next one arrives instead of
+// stopping to wait for it.
+const GLIDE_REPORTS = 1.25
+const MIN_GLIDE = 33
+const MAX_GLIDE = 150
+// The time between a code's reports is averaged over several, so a few arriving together (after the JS thread was busy)
+// don't shrink the glide
+const INTERVAL_WEIGHT = 0.25
+// The filter counts reports this close together as this far apart
+const MIN_GAP = 8
+// The box's center follows the code more readily than its size, which changes slowly (moving the phone closer) and
+// wobbles most (iOS's 1D codes)
+const CENTER = { beta: 0.03, minCutoff: 1 }
+const SIZE = { beta: 0.01, minCutoff: 1 }
 // Once a code stops being reported, its box stays a few reports' worth, so a missed frame doesn't make it blink, then
 // fades out
 const HOLD_REPORTS = 2.5
@@ -31,6 +45,8 @@ type AnimationState = {
   opacity: Animated.Value
   origin: Animated.ValueXY
   reportedAt: number
+  // The code's smoothed center and size
+  smooth: { height: Smoother; width: Smoother; x: Smoother; y: Smoother }
   width: Animated.Value
 }
 
@@ -46,18 +62,26 @@ const holdFor = (interval = FIRST_INTERVAL) => Math.min(Math.max(interval * HOLD
 
 const frameOf = (scan: BarcodeScanResult) => ({ height: scan.bounds?.size.height ?? 0, width: scan.bounds?.size.width ?? 0, x: scan.bounds?.origin.x ?? 0, y: scan.bounds?.origin.y ?? 0 })
 
-// Moves a code's box to its latest bounds
+const glideFor = (interval: number) => Math.min(Math.max(interval * GLIDE_REPORTS, MIN_GLIDE), MAX_GLIDE)
+
+// Moves a code's box toward its latest bounds
 const follow = (animation: AnimationState, scan: BarcodeScanResult, now: number) => {
   const gap = Math.min(now - animation.reportedAt, MAX_HOLD)
-  animation.interval = animation.interval === undefined ? gap : (animation.interval + gap) / 2
+  animation.interval = animation.interval === undefined ? gap : animation.interval + INTERVAL_WEIGHT * (gap - animation.interval)
   animation.reportedAt = now
   if (animation.fade) {
     // Seen again while fading out
     animation.fade = undefined
     animation.opacity.setValue(1)
   }
-  const { height, width, x, y } = frameOf(scan)
-  const glide = { duration: Math.min(animation.interval, MAX_GLIDE), easing: Easing.linear, useNativeDriver: USE_NATIVE_DRIVER }
+  const frame = frameOf(scan)
+  const seconds = Math.max(gap, MIN_GAP) / 1000
+  const { smooth } = animation
+  const width = smooth.width(frame.width, seconds)
+  const height = smooth.height(frame.height, seconds)
+  const x = smooth.x(frame.x + frame.width / 2, seconds) - width / 2
+  const y = smooth.y(frame.y + frame.height / 2, seconds) - height / 2
+  const glide = { duration: glideFor(animation.interval), easing: Easing.linear, useNativeDriver: USE_NATIVE_DRIVER }
   Animated.timing(animation.origin, { ...glide, toValue: { x, y } }).start()
   Animated.timing(animation.width, { ...glide, toValue: width }).start()
   Animated.timing(animation.height, { ...glide, toValue: height }).start()
@@ -77,7 +101,13 @@ const clearTrackedValue = (trackedValues: RefObject<Set<string>>, trackedTimers:
 
 const createAnimationState = (scan: BarcodeScanResult, checked: boolean, now: number): AnimationState => {
   const { height, width, x, y } = frameOf(scan)
-  return { check: new Animated.Value(checked ? 1 : 0), height: new Animated.Value(height), opacity: new Animated.Value(1), origin: new Animated.ValueXY({ x, y }), reportedAt: now, width: new Animated.Value(width) }
+  const smooth = { height: smoother(SIZE), width: smoother(SIZE), x: smoother(CENTER), y: smoother(CENTER) }
+  // The first reading starts each smoother where the code is
+  smooth.height(height, 0)
+  smooth.width(width, 0)
+  smooth.x(x + width / 2, 0)
+  smooth.y(y + height / 2, 0)
+  return { check: new Animated.Value(checked ? 1 : 0), height: new Animated.Value(height), opacity: new Animated.Value(1), origin: new Animated.ValueXY({ x, y }), reportedAt: now, smooth, width: new Animated.Value(width) }
 }
 
 export type UseScanOverlaysOptions = {
