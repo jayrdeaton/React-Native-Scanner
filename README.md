@@ -113,7 +113,8 @@ const [torch, setTorch] = useState(false)
 | `renderClose` | `(handlers: { onPress }) => ReactNode` | | Fully custom close button; receives the press handler to wire up |
 | `renderMenu` | `ReactNode` | | Custom content rendered in the header (e.g. a menu of torch/facing controls) |
 | `safeArea` | `SafeAreaModule` | `configureScanner()`'s value | Overrides the configured `safeArea` for this one instance. See [Installation](#installation). |
-| `scanIcon` | `IconSource` | | Icon shown on an unscanned overlay target |
+| `scanIcon` | `IconSource` | the type's | Icon shown on every unscanned overlay target. Without it, each code gets the icon for its type: `qrcode` for a QR or Aztec code, `data-matrix` for a Data Matrix, and `barcode` for the rest |
+| `scanIconForType` | `(type: string) => IconSource \| undefined` | | Picks an unscanned target's icon from its code's type (expo-camera's, `qr`, `ean13`), ahead of `scanIcon` |
 | `scanTimeout` | `number` | `0` | Seconds before a scanned value reverts to unscanned; `0` = never |
 | `scannedIcon` | `IconSource` | | Icon shown on an already-scanned overlay target |
 | `style` | `ViewStyle` | | Style for the camera view |

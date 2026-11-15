@@ -121,7 +121,11 @@ export type UseScanOverlaysOptions = {
   onSound?: () => void
   onVibrate?: () => void
   paper?: ScannerPaperModule
+  // The icon on every code's box, in place of the one for its type
   scanIcon?: IconSource
+  // Picks the icon for a code's box from its type (expo-camera's, `qr`, `ean13`), ahead of scanIcon. Undefined falls
+  // back to scanIcon, then to the type's default (a QR code, Data Matrix or barcode).
+  scanIconForType?: (type: string) => IconSource | undefined
   scanTimeout?: number
   scannedIcon?: IconSource
 }
@@ -133,7 +137,7 @@ export type UseScanOverlaysResult = {
   scanNodes: ReactNode[]
 }
 
-export const useScanOverlays = ({ accentColor = '#6200ee', autoScan = true, disabledScanValues, disabledScanValueSet, onCapture, onDisabledScan, onScan, onSound, onVibrate, paper, scanIcon, scanTimeout = 0, scannedIcon }: UseScanOverlaysOptions): UseScanOverlaysResult => {
+export const useScanOverlays = ({ accentColor = '#6200ee', autoScan = true, disabledScanValues, disabledScanValueSet, onCapture, onDisabledScan, onScan, onSound, onVibrate, paper, scanIcon, scanIconForType, scanTimeout = 0, scannedIcon }: UseScanOverlaysOptions): UseScanOverlaysResult => {
   const [views, setViews] = useState<Record<string, BarcodeScanResult>>({})
   const animations = useRef<Record<string, AnimationState>>({})
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
@@ -281,9 +285,9 @@ export const useScanOverlays = ({ accentColor = '#6200ee', autoScan = true, disa
       Object.values(views).map((scan) => {
         const animation = animations.current[scan.data]
         if (!animation) return null
-        return <Scan key={scan.data} color={accentColor} check={animation.check} height={animation.height} onPress={handleScanPress} opacity={animation.opacity} origin={animation.origin} paper={paper} scan={scan} scanIcon={scanIcon} scannedIcon={scannedIcon} width={animation.width} />
+        return <Scan key={scan.data} color={accentColor} check={animation.check} height={animation.height} onPress={handleScanPress} opacity={animation.opacity} origin={animation.origin} paper={paper} scan={scan} scanIcon={scanIconForType?.(scan.type) ?? scanIcon} scannedIcon={scannedIcon} width={animation.width} />
       }),
-    [accentColor, handleScanPress, paper, scanIcon, scannedIcon, views]
+    [accentColor, handleScanPress, paper, scanIcon, scanIconForType, scannedIcon, views]
   )
 
   return { handlePress, handleScan, resetScans, scanNodes }

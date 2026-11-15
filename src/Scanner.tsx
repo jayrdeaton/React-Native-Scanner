@@ -58,6 +58,7 @@ export type ScannerProps = {
   renderMenu?: ReactNode
   safeArea?: SafeAreaModule
   scanIcon?: IconSource
+  scanIconForType?: (type: string) => IconSource | undefined
   scanTimeout?: number
   scannedIcon?: IconSource
   style?: ViewStyle
@@ -67,7 +68,7 @@ export type ScannerProps = {
 
 const useCameraPermissionsFallback = (): readonly [{ canAskAgain: boolean; granted: boolean }, () => void] => [{ granted: true, canAskAgain: false }, () => {}]
 
-export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundColor = 'black', barcodeTypes, camera: cameraProp, captureIcon, children, closeIcon, disabledScanValues, disabledScanValueSet, facing = 'back', mode = 'scan', onClose, onDisabledScan, onPermissionDenied, onPhoto, onScan, onSound, onTimeout, onVibrate, paper: paperProp, pictureOptions, renderCapture, renderClose, renderMenu, safeArea: safeAreaProp, scanIcon, scanTimeout = 0, scannedIcon, style, timeout = 0, torch = false }: ScannerProps) => {
+export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundColor = 'black', barcodeTypes, camera: cameraProp, captureIcon, children, closeIcon, disabledScanValues, disabledScanValueSet, facing = 'back', mode = 'scan', onClose, onDisabledScan, onPermissionDenied, onPhoto, onScan, onSound, onTimeout, onVibrate, paper: paperProp, pictureOptions, renderCapture, renderClose, renderMenu, safeArea: safeAreaProp, scanIcon, scanIconForType, scanTimeout = 0, scannedIcon, style, timeout = 0, torch = false }: ScannerProps) => {
   // Per-instance props always win; otherwise fall back to whatever configureScanner()/
   // <ScannerProvider> set globally.
   const scannerConfig = getScannerConfig()
@@ -128,6 +129,7 @@ export const Scanner = ({ accentColor = '#6200ee', autoScan = true, backgroundCo
     onVibrate,
     paper,
     scanIcon,
+    scanIconForType,
     scanTimeout,
     scannedIcon
   })

@@ -365,6 +365,20 @@ describe('useScanOverlays', () => {
     })
   })
 
+  it('gives each code the icon scanIconForType picks for its type, ahead of scanIcon', () => {
+    const scanIconForType = jest.fn((type: string) => (type === 'ean13' ? 'cart' : undefined))
+    const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn(), scanIcon: 'star', scanIconForType }))
+
+    act(() => {
+      result.current.handleScan(scan('product', { type: 'ean13' }))
+      result.current.handleScan(scan('link'))
+    })
+
+    expect(scanIconForType).toHaveBeenCalledWith('ean13')
+    const icons = result.current.scanNodes.map((node) => (node as { props: { scanIcon?: unknown } }).props.scanIcon)
+    expect(icons).toEqual(['cart', 'star'])
+  })
+
   it('resetScans clears scanNodes and lets the same value be captured again as brand-new', () => {
     const onScan = jest.fn()
     const { result } = renderHook(() => useScanOverlays({ onScan }))

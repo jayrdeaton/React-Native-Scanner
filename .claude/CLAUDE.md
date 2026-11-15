@@ -45,6 +45,7 @@ src/
   Bounds.tsx                     - the four corner brackets, each translated to its corner of the box
   place.ts                       - `place()`: the translate transform that puts a fixed-size square at a fraction along a box's animated origin, width and height
   smooth.ts                      - `smoother()`: a One Euro filter for one value, which useScanOverlays runs each report's bounds through
+  scanIcon.ts                    - `defaultScanIcon()`: a code's box icon by type when the app gives none (`qrcode` for QR and Aztec, `data-matrix`, else `barcode`); `scanIconForType` overrides it per type
   TimerRing.tsx                  - animated circular SVG countdown ring; calls onStop when the timer completes
   buildDisabledScanValueSet.ts   - utility: builds a Set<string> of "treat as already scanned" values from an arbitrary item list + accessor, with an optional size limit
   ScannerConfig.tsx              - module-level mutable config (camera/paper/safeArea injections) via configureScanner()/getScannerConfig(), plus a ScannerProvider wrapper that calls configureScanner() synchronously during render

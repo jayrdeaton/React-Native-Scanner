@@ -29,6 +29,18 @@ describe('Scan', () => {
     expect(container.textContent).toContain('paper-icon:qrcode')
   })
 
+  it.each([
+    ['qr', 'qrcode'],
+    ['AZTEC', 'qrcode'],
+    ['datamatrix', 'data-matrix'],
+    ['ean13', 'barcode'],
+    ['code128', 'barcode'],
+    ['pdf417', 'barcode']
+  ])('shows a %s code the %s icon when no scanIcon is given', (type, icon) => {
+    const { container } = render(<Scan {...animatedProps} color='#6200ee' onPress={jest.fn()} paper={paper} scan={{ data: '12345', type }} />)
+    expect(container.textContent).toContain(`paper-icon:${icon}`)
+  })
+
   it('renders through the injected paper IconButton for a string scannedIcon', () => {
     const { container } = render(<Scan {...animatedProps} color='#6200ee' onPress={jest.fn()} paper={paper} scan={scan} scannedIcon='check' />)
     expect(container.textContent).toContain('paper-icon:check')

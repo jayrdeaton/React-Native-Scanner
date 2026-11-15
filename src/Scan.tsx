@@ -4,6 +4,7 @@ import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Bounds } from './Bounds'
 import { type Frame, place } from './place'
+import { defaultScanIcon } from './scanIcon'
 import type { BarcodeScanResult, IconSource, ScannerPaperModule } from './types'
 
 const ICON_SIZE = 30
@@ -48,7 +49,7 @@ function ScanComponent({ check, color, height, onPress, opacity, origin, paper, 
   const resolvedScanIcon = scanIcon ? resolveIcon(scanIcon) : null
   const resolvedScannedIcon = scannedIcon ? resolveIcon(scannedIcon) : null
 
-  const scanIndicator = resolvedScanIcon && typeof resolvedScanIcon !== 'string' ? <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScanIcon}</View> : paper ? <paper.IconButton iconColor='white' containerColor={color} icon={resolvedScanIcon ?? 'qrcode'} size={ICON_SIZE} style={styles.iconButton} /> : <View style={[styles.fallbackIcon, { backgroundColor: color }]} />
+  const scanIndicator = resolvedScanIcon && typeof resolvedScanIcon !== 'string' ? <View style={[styles.iconButton, styles.iconCenter]}>{resolvedScanIcon}</View> : paper ? <paper.IconButton iconColor='white' containerColor={color} icon={resolvedScanIcon ?? defaultScanIcon(scan.type)} size={ICON_SIZE} style={styles.iconButton} /> : <View style={[styles.fallbackIcon, { backgroundColor: color }]} />
 
   const checkIndicator =
     resolvedScannedIcon && typeof resolvedScannedIcon !== 'string' ? (
