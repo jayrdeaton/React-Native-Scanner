@@ -15,7 +15,7 @@ npm run lint         # ESLint
 npm run fix          # ESLint --fix
 npm run build        # tsup, outputs CJS + ESM + types to dist/
 npm run build:watch  # tsup --watch
-npm test             # Jest (64 tests)
+npm test             # Jest (69 tests)
 npm run test:watch   # Jest in watch mode
 npm run typecheck    # TypeScript type check (tsc --noEmit)
 npm run verify       # lint + test + typecheck + build, in that order
@@ -40,9 +40,10 @@ src/
   index.ts                       - all public exports
   types.ts                       - hand-written structural mirrors of expo-camera/react-native-paper/react-native-safe-area-context's types (peer-optional injection pattern, see below), plus BarcodeScanResult/ScanResult/PhotoResult/PictureOptions
   Scanner.tsx                    - main component: camera view (or plain fallback view), pinch-to-zoom gesture, permission handling, capture button (photo or scan mode), timeout ring; delegates scan/overlay state to useScanOverlays
-  useScanOverlays.tsx            - hook: per-value scan animation state, auto-scan vs. manual-capture handling, disabled-value suppression, timed removal of stale overlays; returns handlePress/handleScan/resetScans/scanNodes
-  Scan.tsx                       - one scan overlay: positioned Animated.View that cross-fades between a scan icon and a check icon on press; memoized
-  Bounds.tsx                     - four animated corner brackets drawn around a scan target, no logic
+  useScanOverlays.tsx            - hook: per-value scan animation state, auto-scan vs. manual-capture handling, disabled-value suppression, following each report and fading out stale overlays (see Scan overlays); returns handlePress/handleScan/resetScans/scanNodes
+  Scan.tsx                       - one scan overlay: a full-screen box-none layer whose corners, icon and touch area are each moved into place with transforms; cross-fades between a scan icon and a check icon on press; memoized
+  Bounds.tsx                     - the four corner brackets, each translated to its corner of the box
+  place.ts                       - `place()`: the translate transform that puts a fixed-size square at a fraction along a box's animated origin, width and height
   TimerRing.tsx                  - animated circular SVG countdown ring; calls onStop when the timer completes
   buildDisabledScanValueSet.ts   - utility: builds a Set<string> of "treat as already scanned" values from an arbitrary item list + accessor, with an optional size limit
   ScannerConfig.tsx              - module-level mutable config (camera/paper/safeArea injections) via configureScanner()/getScannerConfig(), plus a ScannerProvider wrapper that calls configureScanner() synchronously during render
@@ -51,7 +52,7 @@ src/
     react-native-gesture-handler.ts      - jest mock: GestureHandlerRootView/GestureDetector passthrough, no-op Gesture.Pan/Pinch chain
     react-native-svg.ts                  - jest mock: Svg/Circle/G/Defs/Rect/Stop/ClipPath stubs
     react-native-worklets.ts             - jest mock: scheduleOnRN calls its function synchronously
-    react-native.ts                      - jest mock: Animated (Value/ValueXY/timing/spring/parallel), Easing, StyleSheet, Platform, View/Text/Pressable/TouchableOpacity stubs
+    react-native.ts                      - jest mock: Animated (Value/ValueXY/add/multiply/timing/spring/parallel), Easing, StyleSheet, Platform, View/Text/Pressable/TouchableOpacity stubs
   __tests__/
     Scan.test.tsx
     Scanner.test.tsx
@@ -61,6 +62,20 @@ src/
     useScanOverlays.test.tsx
     moduleShapes.typecheck.ts  - compile-time-only check that the real peer modules structurally satisfy types.ts's local mirrors; not a runtime test, always shows 0% in coverage (no exclude needed anymore - see Testing)
 ```
+
+## Scan overlays (2026-11-15)
+
+The box around each code follows the camera on the native driver and fades out soon after the code leaves view. Until 0.6.4 it sprang after each report on the JS driver (`Animated.spring`'s default, about 100ms behind a moving code plus overshoot, and every frame a layout commit from the JS thread), and stayed 250ms after the last report, then vanished.
+
+- **Following:** each report starts a linear `Animated.timing` to the new bounds lasting the code's smoothed report interval (the average of the last interval and the newest gap), at most 120ms. iOS reports every frame (AVFoundation, about 33ms) and Android as fast as ML Kit reads, so the box moves steadily about one report behind.
+- **Fading:** after a code's last report the box waits 2.5 reports' worth (80 to 400ms; 250ms for a code reported only once), then fades over 100ms and is removed. A report during the fade brings it back in full. expo-camera sends nothing when a code leaves view, so this timer is the only signal.
+- **Transforms only:** the native driver can't animate width, height, top or left, so `Scan` is a full-screen `box-none` layer, and the corners, the icon and a 100pt touch square scaled to the box are each translated into place (`place.ts`, `Animated.add`/`multiply`, all native-supported).
+- **Touch:** the scaled square is the only thing that takes a touch. The press goes to the full-screen `TouchableOpacity` around it (`accessible={false}`, `pointerEvents: 'box-none'` in its style), which dims the whole box. The responder being full-screen matters: Pressability measures the responder to decide whether a moving finger left it, and a native-driven transform isn't in the shadow tree, so measuring the square would miss. The square carries the accessibility role and an `activate` action. A code with no bounds (iOS's ZXing types: PDF417, Code 39, Codabar) gets no square: scaled to nothing, it could catch taps in the screen's top-left corner.
+- **Checked on the iOS 27 simulator (2026-11-15),** in a SlingScan debug build with this source copied into its `node_modules` and a temporary harness feeding `handleScan` a 160pt QR code every 33ms: still for 1.5s, moving in a circle for 1.5s, gone for 1.5s. Measured frame by frame from a screen recording:
+  - **Following:** 5 to 8pt per frame while the code moved, its own speed, with no jumps, overshoot or stalls, and no drift while it held still.
+  - **Fading:** the box held about 85ms after the last report, faded over about 65ms and was gone, three times out of three, and came straight back with the code.
+  - **Touch:** a press dimmed the box to `TouchableOpacity`'s 0.2 while it kept following the code under the finger, and the release read the code (SlingScan's "Already scanned" toast 0.2s later; none in 12s without a tap).
+  - **Not checked yet:** Android (its report rate is ML Kit's), and a real camera on either platform.
 
 ## Public API
 
@@ -89,7 +104,7 @@ None of the three optional peers are auto-detected at the module level - Metro d
 
 - Framework: Jest (`@infinitetoken/jest-config/react-native`), jsdom environment
 - Mocks in `src/__mocks__/` for `expo-camera`, `react-native-gesture-handler`, `react-native-svg`, `react-native-worklets`, `react-native`
-- 64 tests across 6 suites (`Scan.test.tsx`, `Scanner.test.tsx`, `ScannerConfig.test.tsx`, `TimerRing.test.tsx`, `buildDisabledScanValueSet.test.ts`, `useScanOverlays.test.tsx`)
+- 69 tests across 6 suites (`Scan.test.tsx`, `Scanner.test.tsx`, `ScannerConfig.test.tsx`, `TimerRing.test.tsx`, `buildDisabledScanValueSet.test.ts`, `useScanOverlays.test.tsx`)
 - Coverage floor meets the fleet's 70% default on all four metrics with real margin - measured 98.29/93.14/98.3/98.81% (statements/branches/functions/lines) as of 2026-08-30, including `moduleShapes.typecheck.ts`'s always-0% lines in the denominator; `Scanner.tsx` and `useScanOverlays.tsx` are the weakest-tested files (both still short of 100% branch coverage). No local `collectCoverageFrom`/`coverageThreshold` override - the shared preset's defaults are enough now that coverage has real margin.
 - `moduleShapes.typecheck.ts` is a compile-only structural check (`tsc --noEmit` catches drift between `types.ts`'s local mirrors and the real peer modules) - it has no runtime assertions and doesn't match `testMatch`, so it always shows 0% in the coverage report; a local `collectCoverageFrom` exclude used to hide it from the aggregate when coverage was lower, but it's gone now - the file's permanent 0% no longer drags the aggregate below the 70% floor on any metric. (An in-file `/* istanbul ignore file */` was considered as an alternative - tested directly and confirmed it does **not** work in this fleet's setup: files transformed via `ts-jest`, not `babel-jest`, never pass through the Babel pipeline that honors istanbul directives, so the file still reports 0% either way.)
 

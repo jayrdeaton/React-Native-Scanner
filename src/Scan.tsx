@@ -1,37 +1,49 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Bounds } from './Bounds'
+import { type Frame, place } from './place'
 import type { BarcodeScanResult, IconSource, ScannerPaperModule } from './types'
 
 const ICON_SIZE = 30
+const ICON_SLOT = ICON_SIZE + 8
+// The touch area is a square this size, scaled to the code's box
+const TARGET = 100
+const ACTIVATE = [{ name: 'activate' }]
 
 const resolveIcon = (icon: IconSource): any => {
   if (typeof icon === 'function') return icon({ color: 'white', size: ICON_SIZE })
   return icon
 }
 
-export type ScanProps = {
+export type ScanProps = Frame & {
   check: Animated.Value
   color: string
-  height: Animated.Value
   onPress: (scan: BarcodeScanResult) => void
-  origin: Animated.ValueXY
+  opacity: Animated.Value
   paper?: ScannerPaperModule
   scan: BarcodeScanResult
   scanIcon?: IconSource
   scannedIcon?: IconSource
-  width: Animated.Value
 }
 
-function ScanComponent({ check, color, height, onPress, origin, paper, scan, scanIcon, scannedIcon, width }: ScanProps) {
+function ScanComponent({ check, color, height, onPress, opacity, origin, paper, scan, scanIcon, scannedIcon, width }: ScanProps) {
   const handlePress = useCallback(() => onPress(scan), [onPress, scan])
 
-  const scanOpacity = check.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
-  const checkOpacity = check.interpolate({ inputRange: [0, 1], outputRange: [0, 1] })
+  const { checkOpacity, iconTransform, scanOpacity, targetTransform } = useMemo(() => {
+    const frame = { height, origin, width }
+    return {
+      checkOpacity: check.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+      iconTransform: place(frame, 0.5, 0.5, ICON_SLOT),
+      scanOpacity: check.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+      targetTransform: [...place(frame, 0.5, 0.5, TARGET), { scaleX: Animated.multiply(width, 1 / TARGET) }, { scaleY: Animated.multiply(height, 1 / TARGET) }]
+    }
+  }, [check, height, origin, width])
 
-  const iconStyle = [styles.absolute, styles.iconSlot]
+  // A code read without its bounds (iOS's PDF417, Code 39 and Codabar) gets no touch area: scaled to nothing, it could
+  // still catch taps in the corner of the screen
+  const touchable = !!scan.bounds?.size.width && !!scan.bounds.size.height
 
   const resolvedScanIcon = scanIcon ? resolveIcon(scanIcon) : null
   const resolvedScannedIcon = scannedIcon ? resolveIcon(scannedIcon) : null
@@ -49,14 +61,17 @@ function ScanComponent({ check, color, height, onPress, origin, paper, scan, sca
       </View>
     )
 
+  // The layers cover the camera but only the touch area takes a touch, and the press dims the whole box. Every piece is
+  // moved into place with transforms, so the native driver animates it on the UI thread.
   return (
-    <Animated.View style={[styles.absolute, { top: origin.y, left: origin.x, height, width }]}>
-      <TouchableOpacity style={[StyleSheet.absoluteFill, styles.touchable]} onPress={handlePress}>
-        <Bounds color={color} />
-        <View style={styles.iconRow}>
-          <Animated.View style={[iconStyle, { opacity: scanOpacity }]}>{scanIndicator}</Animated.View>
-          <Animated.View style={[iconStyle, { opacity: checkOpacity }]}>{checkIndicator}</Animated.View>
-        </View>
+    <Animated.View pointerEvents='box-none' style={[StyleSheet.absoluteFill, { opacity }]}>
+      <TouchableOpacity accessible={false} onPress={handlePress} style={[StyleSheet.absoluteFill, styles.passThrough]}>
+        {touchable && <Animated.View accessibilityActions={ACTIVATE} accessibilityRole='button' accessible onAccessibilityAction={handlePress} style={[styles.target, { transform: targetTransform }]} />}
+        <Bounds color={color} height={height} origin={origin} width={width} />
+        <Animated.View pointerEvents='none' style={[styles.icon, { transform: iconTransform }]}>
+          <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, { opacity: scanOpacity }]}>{scanIndicator}</Animated.View>
+          <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, { opacity: checkOpacity }]}>{checkIndicator}</Animated.View>
+        </Animated.View>
       </TouchableOpacity>
     </Animated.View>
   )
@@ -65,7 +80,6 @@ function ScanComponent({ check, color, height, onPress, origin, paper, scan, sca
 export const Scan = memo(ScanComponent)
 
 const styles = StyleSheet.create({
-  absolute: { position: 'absolute' },
   checkText: {
     color: 'white',
     fontSize: 16,
@@ -78,25 +92,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 36
   },
+  icon: {
+    height: ICON_SLOT,
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    width: ICON_SLOT
+  },
   iconButton: {
     alignItems: 'center',
-    height: ICON_SIZE + 8,
+    height: ICON_SLOT,
     justifyContent: 'center',
-    width: ICON_SIZE + 8
+    width: ICON_SLOT
   },
   iconCenter: { alignItems: 'center', justifyContent: 'center' },
-  iconRow: {
-    alignItems: 'center',
-    height: 44,
-    justifyContent: 'center',
-    position: 'relative',
-    width: '100%'
-  },
-  iconSlot: {
-    alignItems: 'center',
-    height: ICON_SIZE + 8,
-    justifyContent: 'center',
-    width: ICON_SIZE + 8
-  },
-  touchable: { alignItems: 'center', flexDirection: 'row' }
+  passThrough: { pointerEvents: 'box-none' },
+  target: {
+    height: TARGET,
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    width: TARGET
+  }
 })

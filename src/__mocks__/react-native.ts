@@ -34,7 +34,9 @@ const animatedObj = {
 const Animated = {
   Value: AnimatedValue,
   ValueXY: AnimatedValueXY,
+  add: (_a: unknown, _b: unknown) => ({}),
   createAnimatedComponent: <T>(C: T): T => C,
+  multiply: (_a: unknown, _b: unknown) => ({}),
   timing: (_value: unknown, _config: unknown) => animatedObj,
   spring: (_value: unknown, _config: unknown) => animatedObj,
   parallel: (_anims: unknown[]) => animatedObj,

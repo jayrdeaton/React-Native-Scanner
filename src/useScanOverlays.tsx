@@ -1,25 +1,66 @@
 import { ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated } from 'react-native'
+import { Animated, Easing } from 'react-native'
 
 import { Scan } from './Scan'
 import type { BarcodeScanResult, IconSource, ScannerPaperModule, ScanResult } from './types'
 
 const DURATION = 250
-const USE_NATIVE_DRIVER = false
-const REMOVAL_DELAY = 250
+// Every overlay animation runs on the native driver, on the UI thread, so the box keeps moving while the JS thread is
+// busy (with a scan's own work, say). That's why Scan draws the box with transforms only.
+const USE_NATIVE_DRIVER = true
+
+// The camera reports a code it sees about every frame on iOS, and as often as ML Kit reads one on Android. The box glides
+// to each report's bounds over about the time since the last one, so it moves steadily a report behind the code at
+// whatever rate the camera reports, rather than springing after it.
+const MAX_GLIDE = 120
+// Once a code stops being reported, its box stays a few reports' worth, so a missed frame doesn't make it blink, then
+// fades out
+const HOLD_REPORTS = 2.5
+const MIN_HOLD = 80
+const MAX_HOLD = 400
+const FADE = 100
+// How often a code is taken to be reported until its second report says
+const FIRST_INTERVAL = 100
 
 type AnimationState = {
   check: Animated.Value
+  fade?: Animated.CompositeAnimation
   height: Animated.Value
+  // The time between this code's reports, smoothed
+  interval?: number
+  opacity: Animated.Value
   origin: Animated.ValueXY
+  reportedAt: number
   width: Animated.Value
 }
 
 const stopAnimationState = (animation?: AnimationState) => {
   animation?.check.stopAnimation()
   animation?.height.stopAnimation()
+  animation?.opacity.stopAnimation()
   animation?.width.stopAnimation()
   animation?.origin.stopAnimation()
+}
+
+const holdFor = (interval = FIRST_INTERVAL) => Math.min(Math.max(interval * HOLD_REPORTS, MIN_HOLD), MAX_HOLD)
+
+const frameOf = (scan: BarcodeScanResult) => ({ height: scan.bounds?.size.height ?? 0, width: scan.bounds?.size.width ?? 0, x: scan.bounds?.origin.x ?? 0, y: scan.bounds?.origin.y ?? 0 })
+
+// Moves a code's box to its latest bounds
+const follow = (animation: AnimationState, scan: BarcodeScanResult, now: number) => {
+  const gap = Math.min(now - animation.reportedAt, MAX_HOLD)
+  animation.interval = animation.interval === undefined ? gap : (animation.interval + gap) / 2
+  animation.reportedAt = now
+  if (animation.fade) {
+    // Seen again while fading out
+    animation.fade = undefined
+    animation.opacity.setValue(1)
+  }
+  const { height, width, x, y } = frameOf(scan)
+  const glide = { duration: Math.min(animation.interval, MAX_GLIDE), easing: Easing.linear, useNativeDriver: USE_NATIVE_DRIVER }
+  Animated.timing(animation.origin, { ...glide, toValue: { x, y } }).start()
+  Animated.timing(animation.width, { ...glide, toValue: width }).start()
+  Animated.timing(animation.height, { ...glide, toValue: height }).start()
 }
 
 const animateCheckState = (check: Animated.Value | undefined, toValue: number) => {
@@ -34,12 +75,10 @@ const clearTrackedValue = (trackedValues: RefObject<Set<string>>, trackedTimers:
   delete trackedTimers.current[value]
 }
 
-const createAnimationState = (scan: BarcodeScanResult, checked: boolean): AnimationState => ({
-  check: new Animated.Value(checked ? 1 : 0),
-  height: new Animated.Value(scan.bounds?.size.height ?? 0),
-  origin: new Animated.ValueXY({ x: scan.bounds?.origin.x ?? 0, y: scan.bounds?.origin.y ?? 0 }),
-  width: new Animated.Value(scan.bounds?.size.width ?? 0)
-})
+const createAnimationState = (scan: BarcodeScanResult, checked: boolean, now: number): AnimationState => {
+  const { height, width, x, y } = frameOf(scan)
+  return { check: new Animated.Value(checked ? 1 : 0), height: new Animated.Value(height), opacity: new Animated.Value(1), origin: new Animated.ValueXY({ x, y }), reportedAt: now, width: new Animated.Value(width) }
+}
 
 export type UseScanOverlaysOptions = {
   accentColor?: string
@@ -117,19 +156,31 @@ export const useScanOverlays = ({ accentColor = '#6200ee', autoScan = true, disa
   )
 
   const removeFromView = useCallback((value: string) => {
-    clearTimeout(timers.current[value])
-    timers.current[value] = setTimeout(() => {
-      stopAnimationState(animations.current[value])
-      setViews((prev) => {
-        const { [value]: removed, ...rest } = prev
-        if (!removed) return prev
-        viewsRef.current = rest
-        return rest
-      })
-      delete animations.current[value]
-      delete timers.current[value]
-    }, REMOVAL_DELAY)
+    stopAnimationState(animations.current[value])
+    setViews((prev) => {
+      const { [value]: removed, ...rest } = prev
+      if (!removed) return prev
+      viewsRef.current = rest
+      return rest
+    })
+    delete animations.current[value]
   }, [])
+
+  // Fades a code's box out once the camera has gone a few reports without it
+  const scheduleFade = useCallback(
+    (value: string, animation: AnimationState) => {
+      clearTimeout(timers.current[value])
+      timers.current[value] = setTimeout(() => {
+        delete timers.current[value]
+        const fade = Animated.timing(animation.opacity, { toValue: 0, duration: FADE, useNativeDriver: USE_NATIVE_DRIVER })
+        animation.fade = fade
+        fade.start(({ finished }) => {
+          if (finished && animation.fade === fade) removeFromView(value)
+        })
+      }, holdFor(animation.interval))
+    },
+    [removeFromView]
+  )
 
   const handleScanPress = useCallback(
     (scan: BarcodeScanResult) => {
@@ -157,23 +208,22 @@ export const useScanOverlays = ({ accentColor = '#6200ee', autoScan = true, disa
       const disabled = isDisabledValue(scan.data)
       if (autoScan && canCaptureValue(scan.data)) handleScanPress(scan)
 
-      const existingView = viewsRef.current[scan.data]
-      const animation = animations.current[scan.data]
-      const frame = { x: scan.bounds?.origin.x ?? 0, y: scan.bounds?.origin.y ?? 0, height: scan.bounds?.size.height ?? 0, width: scan.bounds?.size.width ?? 0 }
-
-      if (existingView && animation) {
-        Animated.parallel([Animated.spring(animation.origin, { toValue: { x: frame.x, y: frame.y }, useNativeDriver: USE_NATIVE_DRIVER }), Animated.spring(animation.height, { toValue: frame.height, useNativeDriver: USE_NATIVE_DRIVER }), Animated.spring(animation.width, { toValue: frame.width, useNativeDriver: USE_NATIVE_DRIVER })]).start()
+      const now = Date.now()
+      let animation = animations.current[scan.data]
+      if (viewsRef.current[scan.data] && animation) {
+        follow(animation, scan, now)
       } else {
-        animations.current[scan.data] = createAnimationState(scan, scanned.current.has(scan.data) || disabled)
+        animation = createAnimationState(scan, scanned.current.has(scan.data) || disabled, now)
+        animations.current[scan.data] = animation
         setViews((prev) => {
           const next = { ...prev, [scan.data]: scan }
           viewsRef.current = next
           return next
         })
       }
-      removeFromView(scan.data)
+      scheduleFade(scan.data, animation)
     },
-    [autoScan, canCaptureValue, handleScanPress, isDisabledValue, removeFromView]
+    [autoScan, canCaptureValue, handleScanPress, isDisabledValue, scheduleFade]
   )
 
   const handlePress = useCallback(() => {
@@ -201,7 +251,7 @@ export const useScanOverlays = ({ accentColor = '#6200ee', autoScan = true, disa
       Object.values(views).map((scan) => {
         const animation = animations.current[scan.data]
         if (!animation) return null
-        return <Scan key={scan.data} color={accentColor} check={animation.check} height={animation.height} onPress={handleScanPress} origin={animation.origin} paper={paper} scan={scan} scanIcon={scanIcon} scannedIcon={scannedIcon} width={animation.width} />
+        return <Scan key={scan.data} color={accentColor} check={animation.check} height={animation.height} onPress={handleScanPress} opacity={animation.opacity} origin={animation.origin} paper={paper} scan={scan} scanIcon={scanIcon} scannedIcon={scannedIcon} width={animation.width} />
       }),
     [accentColor, handleScanPress, paper, scanIcon, scannedIcon, views]
   )

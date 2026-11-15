@@ -120,6 +120,10 @@ const [torch, setTorch] = useState(false)
 | `timeout` | `number` | `0` | Seconds before `onTimeout`/`onClose` fires; `0` = no timeout |
 | `torch` | `boolean` | `false` | Whether the torch/flashlight is enabled |
 
+## Scan overlays
+
+Each code the camera reports gets a box around it. The box glides to each report's bounds over about the time since the code's last report, so it keeps up with the camera on iOS (every frame) and Android (as fast as ML Kit reads). Once the camera stops reporting a code, its box waits a few reports' worth (80 to 400ms, depending on how often that code was reported) and fades out. Every overlay animation runs on the native driver, so a busy JS thread doesn't stall the box. Tapping a box reads its code again.
+
 ## ScanResult
 
 ```ts

@@ -9,6 +9,7 @@ const scan: BarcodeScanResult = { data: '12345', type: 'QR' }
 const animatedProps = {
   check: new Animated.Value(0),
   height: new Animated.Value(0),
+  opacity: new Animated.Value(1),
   origin: new Animated.ValueXY(),
   width: new Animated.Value(0)
 }

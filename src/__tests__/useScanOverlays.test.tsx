@@ -1,4 +1,5 @@
 import { act, fireEvent, render, renderHook } from '@testing-library/react'
+import { Animated } from 'react-native'
 
 import type { BarcodeScanResult } from '../types'
 import { useScanOverlays } from '../useScanOverlays'
@@ -180,11 +181,22 @@ describe('useScanOverlays', () => {
     })
   })
 
-  describe('the 250ms view-removal delay', () => {
+  describe('following a code and fading its box', () => {
     beforeEach(() => jest.useFakeTimers())
-    afterEach(() => jest.useRealTimers())
+    afterEach(() => {
+      jest.restoreAllMocks()
+      jest.useRealTimers()
+    })
 
-    it('removes the scan node from scanNodes after 250ms', () => {
+    // Reports a code every `every` ms, `count` times
+    const report = (handleScan: () => void, count: number, every: number) => {
+      for (let i = 0; i < count; i++) {
+        if (i > 0) act(() => jest.advanceTimersByTime(every))
+        act(handleScan)
+      }
+    }
+
+    it('removes a code reported once after 250ms', () => {
       const onScan = jest.fn()
       const { result } = renderHook(() => useScanOverlays({ onScan }))
 
@@ -194,10 +206,110 @@ describe('useScanOverlays', () => {
       expect(result.current.scanNodes).toHaveLength(1)
 
       act(() => {
-        jest.advanceTimersByTime(250)
+        jest.advanceTimersByTime(249)
+      })
+      expect(result.current.scanNodes).toHaveLength(1)
+
+      act(() => {
+        jest.advanceTimersByTime(1)
+      })
+      expect(result.current.scanNodes).toHaveLength(0)
+    })
+
+    it('glides to each report on the native driver, over the time since the last one', () => {
+      const timing = jest.spyOn(Animated, 'timing')
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      act(() => {
+        result.current.handleScan(scan('abc'))
+      })
+      act(() => {
+        jest.advanceTimersByTime(33)
+      })
+      act(() => {
+        result.current.handleScan(scan('abc', { bounds: { origin: { x: 10, y: 20 }, size: { width: 30, height: 40 } } }))
       })
 
+      const glides = timing.mock.calls.map(([, config]) => config)
+      expect(glides).toEqual([expect.objectContaining({ duration: 33, toValue: { x: 10, y: 20 }, useNativeDriver: true }), expect.objectContaining({ duration: 33, toValue: 30, useNativeDriver: true }), expect.objectContaining({ duration: 33, toValue: 40, useNativeDriver: true })])
+    })
+
+    it('glides for no longer than 120ms, however slowly the camera reports', () => {
+      const timing = jest.spyOn(Animated, 'timing')
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      report(() => result.current.handleScan(scan('abc')), 2, 200)
+
+      expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 120 }))
+    })
+
+    it('fades a box out sooner when the camera reports its code often', () => {
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      // Every 33ms, as iOS reports: 2.5 reports' worth is about 82ms
+      report(() => result.current.handleScan(scan('abc')), 4, 33)
+
+      act(() => {
+        jest.advanceTimersByTime(80)
+      })
+      expect(result.current.scanNodes).toHaveLength(1)
+
+      act(() => {
+        jest.advanceTimersByTime(3)
+      })
       expect(result.current.scanNodes).toHaveLength(0)
+    })
+
+    it('keeps a box at least 80ms and at most 400ms after its last report', () => {
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      report(() => result.current.handleScan(scan('fast')), 2, 0)
+      act(() => {
+        jest.advanceTimersByTime(79)
+      })
+      expect(result.current.scanNodes).toHaveLength(1)
+      act(() => {
+        jest.advanceTimersByTime(1)
+      })
+      expect(result.current.scanNodes).toHaveLength(0)
+
+      // 200ms apart: 2.5 reports' worth would be 500ms
+      report(() => result.current.handleScan(scan('slow')), 2, 200)
+      act(() => {
+        jest.advanceTimersByTime(399)
+      })
+      expect(result.current.scanNodes).toHaveLength(1)
+      act(() => {
+        jest.advanceTimersByTime(1)
+      })
+      expect(result.current.scanNodes).toHaveLength(0)
+    })
+
+    it('keeps a box whose code is seen again while it fades', () => {
+      const original = Animated.timing
+      const fades: ((result: { finished: boolean }) => void)[] = []
+      jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+        if ((config as { toValue: unknown }).toValue !== 0) return original(value, config)
+        return { reset: jest.fn(), start: (callback?: (result: { finished: boolean }) => void) => callback && fades.push(callback), stop: jest.fn() }
+      })
+      const { result } = renderHook(() => useScanOverlays({ onScan: jest.fn() }))
+
+      act(() => {
+        result.current.handleScan(scan('abc'))
+      })
+      act(() => {
+        jest.advanceTimersByTime(250)
+      })
+      expect(fades).toHaveLength(1)
+
+      // Seen again mid-fade, and the fade then reports finishing anyway
+      act(() => {
+        result.current.handleScan(scan('abc'))
+      })
+      act(() => {
+        fades[0]({ finished: true })
+      })
+      expect(result.current.scanNodes).toHaveLength(1)
     })
   })
 
