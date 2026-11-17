@@ -38,7 +38,7 @@ import { ScannerProvider } from '@rific/scanner'
 
 Either way, this is one-time setup, not reactive state: call it once, before your first `<Scanner>` renders. Omit any of the three and you get a working fallback for just that one: no camera feed (a plain colored view instead), a simple fallback dot instead of Paper's icon buttons, and a fixed iOS-style top padding instead of real device insets.
 
-`camera`/`paper`/`safeArea` are also available as per-instance props on `<Scanner>`, for the rare case where one particular screen needs something different from the configured default: a prop always overrides the configured value.
+`camera`/`paper`/`safeArea` are also available as per-instance props on `<Scanner>`, for the rare case where one particular screen needs something different from the configured default: a prop always overrides the configured value. `getScannerConfig()` returns what was configured (a `ScannerConfig`, `{ camera?, paper?, safeArea? }`).
 
 ## Usage
 
@@ -124,6 +124,39 @@ const [torch, setTorch] = useState(false)
 ## Scan overlays
 
 Each code the camera reports gets a box around it. Each report's bounds are smoothed (a One Euro filter: hard while the code holds still, so the box doesn't wobble with the camera's noise, and lightly while it moves, so the box keeps up), and the box glides to them over a little longer than the time since the code's last report, so it moves steadily with the camera on iOS (every frame) and Android (as fast as ML Kit reads). Once the camera stops reporting a code, its box waits a few reports' worth (80 to 400ms, depending on how often that code was reported) and fades out. Every overlay animation runs on the native driver, so a busy JS thread doesn't stall the box. Tapping a box reads its code again.
+
+### `useScanOverlays`
+
+The same boxes, for an app that renders its own camera view instead of `Scanner`. It takes the overlay props from the table above (`onScan`, `accentColor`, `autoScan`, `disabledScanValues`, `disabledScanValueSet`, `onDisabledScan`, `onSound`, `onVibrate`, `paper`, `scanIcon`, `scanIconForType`, `scanTimeout`, `scannedIcon`), plus `onCapture`, called after each scan is reported (`Scanner` starts its timeout ring there). It doesn't read `configureScanner()`'s value, so pass `paper` (`getScannerConfig().paper`, say) for Paper's icon buttons.
+
+```tsx
+import { useScanOverlays } from '@rific/scanner'
+import { CameraView } from 'expo-camera'
+
+const { handleScan, handlePress, resetScans, scanNodes } = useScanOverlays({ onScan, autoScan: false })
+
+<Pressable style={StyleSheet.absoluteFill} onPress={handlePress}>
+  <CameraView style={StyleSheet.absoluteFill} onBarcodeScanned={handleScan} />
+  {scanNodes}
+</Pressable>
+```
+
+- `handleScan` takes expo-camera's barcode reports, and draws and follows a box for each code.
+- `scanNodes` are the boxes, positioned in the camera view's coordinates, so render them over it in the same frame.
+- `handlePress` reads every code in view that can be read, for a manual capture (`autoScan: false`); with `autoScan` on, it does nothing.
+- `resetScans()` clears every box and every scanned mark.
+
+### `buildDisabledScanValueSet`
+
+Builds `disabledScanValueSet` from your own records, skipping empty values and duplicates, and stopping once `limit` values are in (no limit by default):
+
+```ts
+import { buildDisabledScanValueSet } from '@rific/scanner'
+
+const disabledScanValueSet = useMemo(() => buildDisabledScanValueSet(items, { getValues: (item) => [item.barcode, item.altBarcode] }), [items])
+```
+
+`getValues` can return one string, an iterable of them, or `null`/`undefined` for a record with none.
 
 ## ScanResult
 
