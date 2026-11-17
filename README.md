@@ -203,3 +203,7 @@ Optional, none are auto-detected: configure them via `configureScanner()`/`Scann
 - `expo-camera >= 55.0.0`: barcode scanning; without it the camera renders as a blank view
 - `react-native-paper >= 5.0.0`: richer scan-overlay icon buttons; without it falls back to a plain dot
 - `react-native-safe-area-context >= 5.0.0`: proper notch/safe area handling; without it falls back to a fixed iOS top padding
+
+---
+
+Made by [Infinite Token](https://www.infinitetoken.com), the team behind [Lumber](https://lumber.infinitetoken.com): end-to-end encrypted logging.
